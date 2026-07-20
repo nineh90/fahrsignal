@@ -70,6 +70,31 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
     }
   }
 
+  /// Zurück zum Startbildschirm – bewusst mit Rückfrage, damit während der
+  /// Fahrt keine versehentliche Bedienung die Anzeige verlässt.
+  Future<void> _confirmExit() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Zurück zum Start?'),
+        content: const Text(
+          'Die Anzeige wird beendet und du kehrst zu Raumcode & Rollenwahl zurück.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Bleiben'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Verlassen'),
+          ),
+        ],
+      ),
+    );
+    if (leave == true && mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<DriveCommand>>(commandStreamProvider, (_, next) {
@@ -153,6 +178,22 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
             child: Opacity(
               opacity: 0.9,
               child: FahrSignalLogo(size: 26, wheelColor: fg, dotColor: bg),
+            ),
+          ),
+          // Dezenter Ausgang oben rechts – klein & mit Rückfrage, damit die
+          // Sicherheits-Leitplanke "keine versehentliche Bedienung" gewahrt bleibt.
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Opacity(
+              opacity: 0.55,
+              child: IconButton(
+                tooltip: 'Zurück zum Start',
+                iconSize: 22,
+                color: fg,
+                onPressed: _confirmExit,
+                icon: const Icon(Icons.arrow_back),
+              ),
             ),
           ),
           if (lost) const _ConnectionLostOverlay(),
