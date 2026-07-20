@@ -360,13 +360,16 @@ class _HistoryStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      reverse: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    // Die drei JÜNGSTEN Hinweise, neuester zuerst (links). Kein reverse-Scroll –
+    // so sind immer die aktuellsten sichtbar, nicht die vom Fahrtbeginn.
+    // FittedBox stellt sicher, dass alle drei auch auf schmalen Screens passen.
+    final recent = history.take(3).toList();
+    return FittedBox(
+      fit: BoxFit.scaleDown,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final c in history.take(6))
+          for (final c in recent)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 5),
               child: _HistoryChip(cmd: c, fg: fg),
