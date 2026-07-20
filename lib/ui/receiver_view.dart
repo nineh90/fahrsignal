@@ -171,9 +171,21 @@ class _CommandDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = cmd;
     if (c == null) {
-      return Text(
-        'BEREIT',
-        style: TextStyle(color: fg, fontSize: 40, fontWeight: FontWeight.w600),
+      // Ruhezustand: keine aktive Anweisung → freundlicher Gruß.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.directions_car, color: fg, size: 96),
+          const SizedBox(height: 22),
+          Text(
+            'Gute Fahrt',
+            style: TextStyle(
+              color: fg,
+              fontSize: 46,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       );
     }
     // Frei getippte Anweisung des Fahrlehrers.
