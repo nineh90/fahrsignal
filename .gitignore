@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# FahrSignal: lokale Secrets / Konfiguration (z. B. Supabase-Keys)
+# Anon-Key ist zwar client-öffentlich, aber Service-Keys / private Configs
+# dürfen NIE ins Repo. Keys lieber per --dart-define übergeben.
+.env
+.env.*
+*.secret.json
+lib/**/secrets.dart
