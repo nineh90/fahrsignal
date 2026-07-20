@@ -105,18 +105,36 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 12,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const FahrSignalLogo(
-              size: 26,
+              size: 24,
               wheelColor: Colors.white,
               dotColor: kBrandNavy,
             ),
             const SizedBox(width: 10),
-            Text('Senden · Raum $room'),
+            const Text('Senden'),
+            const SizedBox(width: 10),
+            Flexible(child: _RoomBadge(room: room)),
           ],
         ),
         actions: [
+          // Verbindungsstatus kompakt als farbiges Icon – der Text hätte den
+          // Header überladen. Details per Tooltip.
+          Tooltip(
+            message: connected ? 'Verbunden' : 'Suche Verbindung …',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(
+                connected ? Icons.link : Icons.link_off,
+                color: connected
+                    ? const Color(0xFF7CF29B)
+                    : const Color(0xFFFFC46B),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Hell/Dunkel',
             icon: Icon(
@@ -126,28 +144,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
             ),
             onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
           ),
-          IconButton(
-            tooltip: 'Freie Anweisung',
-            icon: const Icon(Icons.edit_note),
-            onPressed: _composeFreitext,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: Row(
-              children: [
-                Icon(
-                  connected ? Icons.link : Icons.link_off,
-                  size: 20,
-                  color: connected ? Colors.green : Colors.orange,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  connected ? 'Verbunden' : 'Suche …',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(width: 4),
         ],
         bottom: const _RainbowStrip(),
       ),
@@ -212,6 +209,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
       bottomNavigationBar: _BottomBar(
         combo: _combo,
         staged: _staged,
+        onFreitext: _composeFreitext,
         onToggleCombo: () => setState(() {
           _combo = !_combo;
           if (!_combo) _staged.clear();
@@ -222,6 +220,42 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
         onOff: () => ref
             .read(transportProvider)
             .sendCommand(DriveCommand.now(kOffKey, Urgency.info)),
+      ),
+    );
+  }
+}
+
+/// Kompaktes Raumcode-Badge im Header (statt langem Titeltext).
+class _RoomBadge extends StatelessWidget {
+  final String room;
+  const _RoomBadge({required this.room});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.meeting_room, size: 15, color: Colors.white70),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              room,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -390,6 +424,7 @@ class _CommandTile extends StatelessWidget {
 class _BottomBar extends StatelessWidget {
   final bool combo;
   final List<CommandDef> staged;
+  final VoidCallback onFreitext;
   final VoidCallback onToggleCombo;
   final void Function(CommandDef) onRemove;
   final VoidCallback onClear;
@@ -398,6 +433,7 @@ class _BottomBar extends StatelessWidget {
   const _BottomBar({
     required this.combo,
     required this.staged,
+    required this.onFreitext,
     required this.onToggleCombo,
     required this.onRemove,
     required this.onClear,
@@ -468,37 +504,53 @@ class _BottomBar extends StatelessWidget {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: FilledButton.tonalIcon(
-                      onPressed: onOff,
-                      icon: const Icon(Icons.visibility_off),
-                      label: const Text('Anzeige aus'),
-                    ),
+                // Freie Anweisung – prominent und direkt erreichbar.
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton.tonalIcon(
+                    onPressed: onFreitext,
+                    icon: const Icon(Icons.edit_note),
+                    label: const Text('Freie Anweisung schreiben'),
                   ),
                 ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: onToggleCombo,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: combo
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                      foregroundColor: combo
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurface,
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 52,
+                        child: FilledButton.tonalIcon(
+                          onPressed: onOff,
+                          icon: const Icon(Icons.visibility_off),
+                          label: const Text('Anzeige aus'),
+                        ),
+                      ),
                     ),
-                    icon: Icon(combo ? Icons.layers_clear : Icons.layers),
-                    label: Text(combo ? 'Fertig' : 'Kombi'),
-                  ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: onToggleCombo,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: combo
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                          foregroundColor: combo
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                        icon: Icon(combo ? Icons.layers_clear : Icons.layers),
+                        label: Text(combo ? 'Fertig' : 'Kombi'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
