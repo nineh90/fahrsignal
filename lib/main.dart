@@ -26,12 +26,18 @@ String get _relayUrl {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final useSupabase = _supabaseUrl.isNotEmpty && _supabaseKey.isNotEmpty;
+  // Env-Werte defensiv säubern: ein versehentliches Leerzeichen/Newline in der
+  // Build-Umgebung (z. B. Vercel) darf Supabases Uri.parse nicht sprengen
+  // ("Scheme not starting with alphabetic character" → weißer Bildschirm).
+  final supabaseUrl = _supabaseUrl.trim();
+  final supabaseKey = _supabaseKey.trim();
+
+  final useSupabase = supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty;
   if (useSupabase) {
     await Supabase.initialize(
-      url: _supabaseUrl,
+      url: supabaseUrl,
       // Neues Supabase-Key-Format (sb_publishable_…). Ist client-öffentlich.
-      publishableKey: _supabaseKey,
+      publishableKey: supabaseKey,
     );
   }
 
