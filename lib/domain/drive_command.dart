@@ -11,7 +11,8 @@ const String kOffKey = 'off';
 const String kFreitextKey = 'freitext';
 
 /// Aktuelle Protokollversion des Nachrichtenmodells.
-const int kProtocolVersion = 3;
+/// v4: Ordinal-Feld `ord` ergänzt („zweite Straße links").
+const int kProtocolVersion = 4;
 
 /// Eine Fahranweisung. Kann **ein bis drei** Kommandos kombinieren, als
 /// Abfrage (`ask`) oder als **Freitext** (`text`) gesendet werden.
@@ -30,6 +31,12 @@ class DriveCommand {
   /// Frei getippte Anweisung; wenn gesetzt, zeigt der Empfänger diesen Text.
   final String text;
 
+  /// Ordnungszahl als Attribut des Kommandos: 0 = keine, sonst 1–9.
+  /// Beispiel: „zweite Straße links" = `keys:['abbiegen_links'], ord:2`.
+  /// Bewusst **kein** eigener Kombi-Eintrag – ein Ordinal ist kein Kommando,
+  /// sondern eine Näherbestimmung des primären Kommandos.
+  final int ord;
+
   const DriveCommand({
     this.v = kProtocolVersion,
     required this.keys,
@@ -37,22 +44,29 @@ class DriveCommand {
     required this.ts,
     this.ask = false,
     this.text = '',
+    this.ord = 0,
   });
 
   /// Einzelnes Kommando mit aktuellem Zeitstempel.
-  factory DriveCommand.now(String key, Urgency urgency, {bool ask = false}) =>
-      DriveCommand(
-        keys: [key],
-        urgency: urgency,
-        ask: ask,
-        ts: DateTime.now().millisecondsSinceEpoch,
-      );
+  factory DriveCommand.now(
+    String key,
+    Urgency urgency, {
+    bool ask = false,
+    int ord = 0,
+  }) => DriveCommand(
+    keys: [key],
+    urgency: urgency,
+    ask: ask,
+    ord: ord,
+    ts: DateTime.now().millisecondsSinceEpoch,
+  );
 
   /// Kombination mehrerer Kommandos (Dringlichkeit = höchste der Teile).
-  factory DriveCommand.combo(List<String> keys, Urgency urgency) =>
+  factory DriveCommand.combo(List<String> keys, Urgency urgency, {int ord = 0}) =>
       DriveCommand(
         keys: List.unmodifiable(keys),
         urgency: urgency,
+        ord: ord,
         ts: DateTime.now().millisecondsSinceEpoch,
       );
 
@@ -73,6 +87,7 @@ class DriveCommand {
   bool get isCombo => keys.length > 1;
   bool get isOff => keys.length == 1 && keys.first == kOffKey;
   bool get isFreitext => text.isNotEmpty;
+  bool get hasOrdinal => ord > 0;
 
   Map<String, dynamic> toJson() => {
     'v': v,
@@ -81,6 +96,7 @@ class DriveCommand {
     'ts': ts,
     if (ask) 'ask': true,
     if (text.isNotEmpty) 'text': text,
+    if (ord != 0) 'ord': ord,
   };
 
   factory DriveCommand.fromJson(Map<String, dynamic> j) => DriveCommand(
@@ -90,9 +106,12 @@ class DriveCommand {
     ts: j['ts'] as int,
     ask: (j['ask'] as bool?) ?? false,
     text: (j['text'] as String?) ?? '',
+    // Fehlt in v3-Nachrichten – Default 0 hält ältere Sender lesbar.
+    ord: (j['ord'] as int?) ?? 0,
   );
 
   @override
   String toString() =>
-      'DriveCommand(${keys.join('+')}, ${urgency.name}, ask=$ask, ts=$ts)';
+      'DriveCommand(${keys.join('+')}, ${urgency.name}, '
+      'ask=$ask, ord=$ord, ts=$ts)';
 }
