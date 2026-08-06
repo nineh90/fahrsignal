@@ -20,16 +20,12 @@ import 'traffic_signs.dart';
 /// raus. Mehrere Kommandos in einem Satz („links und dann rechts") gehen als
 /// Kombination raus – das ersetzt den früheren Kombi-Modus der Kacheln.
 class PttBar extends ConsumerStatefulWidget {
-  /// Keys des aktuell gewählten Dashboard-Bereichs – Treffer außerhalb werden
-  /// abgewertet, damit „Felgen" im Fahrtmodus nicht gegen „folgen" gewinnt.
-  final Set<String> scopeKeys;
-
   /// Stand des Erklären/Abfragen-Umschalters. Gilt als Vorgabe für Kommandos
   /// mit Erklärung; ein gesprochener Marker („frag … ab", „erkläre …")
   /// übersteuert ihn.
   final bool askDefault;
 
-  const PttBar({super.key, required this.scopeKeys, this.askDefault = false});
+  const PttBar({super.key, this.askDefault = false});
 
   @override
   ConsumerState<PttBar> createState() => _PttBarState();
@@ -53,7 +49,15 @@ class _PttBarState extends ConsumerState<PttBar> {
   /// Kurz angezeigte Sendebestätigung – erscheint **im** Halteknopf, damit
   /// sie keine Kacheln verdeckt. Zurücknehmen läuft über „Anzeige aus".
   DriveCommand? _confirmed;
-  Timer? _confirmTimer;
+
+  /// Kurzer Hinweis im Halteknopf („Nichts verstanden").
+  String? _notice;
+  Timer? _flashTimer;
+
+  /// Kam in diesem Haltevorgang ein Endergebnis an? Safari/Chrome liefern
+  /// bei leiser oder abgebrochener Aufnahme manchmal keines – dann werten
+  /// wir das letzte Zwischenergebnis aus, statt stumm zu bleiben.
+  bool _gotFinal = false;
 
   @override
   void initState() {
@@ -62,7 +66,9 @@ class _PttBarState extends ConsumerState<PttBar> {
     _resultSub = recognizer.results.listen(_onResult);
     _statusSub = recognizer.status.listen((s) {
       if (!mounted) return;
-      setState(() => _listening = s == SpeechStatus.listening);
+      final listening = s == SpeechStatus.listening;
+      if (!listening && !_holding) _handleRecognitionEnd();
+      setState(() => _listening = listening);
     });
   }
 
@@ -70,7 +76,7 @@ class _PttBarState extends ConsumerState<PttBar> {
   void dispose() {
     _resultSub?.cancel();
     _statusSub?.cancel();
-    _confirmTimer?.cancel();
+    _flashTimer?.cancel();
     super.dispose();
   }
 
@@ -91,11 +97,15 @@ class _PttBarState extends ConsumerState<PttBar> {
       return;
     }
 
+    _gotFinal = true;
     setState(() => _interim = '');
+    _handleTranscript(r.transcript, r.confidence <= 0 ? 0.9 : r.confidence);
+  }
+
+  void _handleTranscript(String text, double asrConfidence) {
     final intent = parseUtterance(
-      r.transcript,
-      asrConfidence: r.confidence <= 0 ? 0.9 : r.confidence,
-      scopeKeys: widget.scopeKeys,
+      text,
+      asrConfidence: asrConfidence,
       urgencyOf: _urgencyOf,
     );
 
@@ -105,6 +115,33 @@ class _PttBarState extends ConsumerState<PttBar> {
     } else {
       setState(() => _pending = intent);
     }
+  }
+
+  /// Erkennung ist zu Ende (Status idle/error nach dem Loslassen), aber es
+  /// kam kein Endergebnis: letztes Zwischenergebnis auswerten – mit
+  /// gedrückter Konfidenz, sodass es immer in der Rückfrage landet. War gar
+  /// nichts zu hören, kurz Bescheid geben statt stumm zu bleiben.
+  void _handleRecognitionEnd() {
+    if (_gotFinal) return;
+    _gotFinal = true;
+    final text = _interim.trim();
+    setState(() => _interim = '');
+    if (text.isEmpty) {
+      _flashNotice('Nichts verstanden – nochmal versuchen');
+    } else {
+      _handleTranscript(text, 0.6);
+    }
+  }
+
+  void _flashNotice(String text) {
+    _flashTimer?.cancel();
+    setState(() {
+      _notice = text;
+      _confirmed = null;
+    });
+    _flashTimer = Timer(const Duration(milliseconds: 2000), () {
+      if (mounted) setState(() => _notice = null);
+    });
   }
 
   void _send(DriveCommand cmd) {
@@ -121,9 +158,12 @@ class _PttBarState extends ConsumerState<PttBar> {
 
     ref.read(transportProvider).sendCommand(cmd);
 
-    _confirmTimer?.cancel();
-    setState(() => _confirmed = cmd);
-    _confirmTimer = Timer(const Duration(milliseconds: 2500), () {
+    _flashTimer?.cancel();
+    setState(() {
+      _confirmed = cmd;
+      _notice = null;
+    });
+    _flashTimer = Timer(const Duration(milliseconds: 2500), () {
       if (mounted) setState(() => _confirmed = null);
     });
   }
@@ -155,6 +195,7 @@ class _PttBarState extends ConsumerState<PttBar> {
       _pending = null;
       _interim = '';
     });
+    _gotFinal = false;
     await recognizer.start();
   }
 
@@ -233,6 +274,7 @@ class _PttBarState extends ConsumerState<PttBar> {
           active: active,
           enabled: supported,
           confirmedLabel: _confirmed == null ? null : displayLabel(_confirmed!),
+          noticeLabel: _notice,
           onStart: _startHold,
           onEnd: _endHold,
         ),
@@ -250,6 +292,9 @@ class _HoldButton extends StatelessWidget {
   /// Label des gerade Gesendeten – wird für ~2,5 s im Knopf bestätigt.
   final String? confirmedLabel;
 
+  /// Kurzer Hinweis („Nichts verstanden") – ebenfalls im Knopf.
+  final String? noticeLabel;
+
   final Future<void> Function() onStart;
   final Future<void> Function() onEnd;
 
@@ -257,6 +302,7 @@ class _HoldButton extends StatelessWidget {
     required this.active,
     required this.enabled,
     required this.confirmedLabel,
+    required this.noticeLabel,
     required this.onStart,
     required this.onEnd,
   });
@@ -264,15 +310,18 @@ class _HoldButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Bestätigung nur zeigen, wenn nicht gerade gesprochen wird –
+    // Bestätigung/Hinweis nur zeigen, wenn nicht gerade gesprochen wird –
     // beim erneuten Halten hat das Zuhören Vorrang.
     final confirming = !active && confirmedLabel != null;
+    final noticing = !active && !confirming && noticeLabel != null;
     final background = !enabled
         ? scheme.surfaceContainerHighest
         : active
         ? scheme.error
         : confirming
         ? const Color(0xFF2E7D32)
+        : noticing
+        ? const Color(0xFF546E7A)
         : scheme.primary;
     final foreground = !enabled
         ? scheme.onSurfaceVariant
@@ -309,6 +358,8 @@ class _HoldButton extends StatelessWidget {
               Icon(
                 confirming
                     ? Icons.check_circle
+                    : noticing
+                    ? Icons.hearing_disabled
                     : active
                     ? Icons.mic
                     : Icons.mic_none,
@@ -320,6 +371,8 @@ class _HoldButton extends StatelessWidget {
                 child: Text(
                   confirming
                       ? 'Gesendet: ${confirmedLabel!.toUpperCase()}'
+                      : noticing
+                      ? noticeLabel!
                       : active
                       ? 'Ich höre …'
                       : 'Halten & sprechen',
@@ -378,7 +431,11 @@ class _Candidates extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              unmatched ? 'Nicht als Kommando erkannt' : 'Bitte bestätigen',
+              unmatched
+                  ? (intent.alternatives.isEmpty
+                        ? 'Nicht als Kommando erkannt'
+                        : 'Meintest du …?')
+                  : 'Bitte bestätigen',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

@@ -26,18 +26,6 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   // per Sprache (oder der Umschalter) holt gezielt die Erklärung.
   bool _ask = true;
 
-  /// Scope für die Spracherkennung. Alles Fahrbetriebsrelevante (Fahrt,
-  /// Zeichen, Fahrschüler) ist **immer** im Scope – das Auto fährt weiter,
-  /// egal welcher Bereich offen ist; „links" darf nie in der Rückfrage landen.
-  /// Nur die Fahrzeug-Themen bleiben auf ihren Bereich begrenzt, damit
-  /// „Felgen" im Fahrtmodus nicht gegen „Straße folgen" gewinnt.
-  Set<String> get _scopeKeys => {
-    for (final m in DashboardMode.values)
-      if (m != DashboardMode.fahrzeug || _mode == DashboardMode.fahrzeug)
-        for (final cat in categoriesInMode(m))
-          for (final d in commandsInCategory(cat)) d.key,
-  };
-
   void _tap(CommandDef d) {
     ref
         .read(transportProvider)
@@ -202,7 +190,6 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
         ],
       ),
       bottomNavigationBar: _SenderBottomBar(
-        scopeKeys: _scopeKeys,
         askDefault: _ask,
         onFreitext: _composeFreitext,
         onOff: () => ref
@@ -381,12 +368,10 @@ class _CommandTile extends StatelessWidget {
 /// Nebenwege (Anzeige aus, Freitext) – bewusst flach gehalten, damit der
 /// Halteknopf dominiert.
 class _SenderBottomBar extends StatelessWidget {
-  final Set<String> scopeKeys;
   final bool askDefault;
   final VoidCallback onFreitext;
   final VoidCallback onOff;
   const _SenderBottomBar({
-    required this.scopeKeys,
     required this.askDefault,
     required this.onFreitext,
     required this.onOff,
@@ -402,7 +387,7 @@ class _SenderBottomBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PttBar(scopeKeys: scopeKeys, askDefault: askDefault),
+            PttBar(askDefault: askDefault),
             const SizedBox(height: 8),
             Row(
               children: [

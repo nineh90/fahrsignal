@@ -15,11 +15,11 @@ void expectIntent(
   Urgency? urgency,
   bool? ask,
   bool checkAsk = false,
+  String? mustSuggest,
   ParseOutcome outcome = ParseOutcome.matched,
-  Set<String>? scope,
 }) {
   checks++;
-  final r = parseUtterance(utterance, scopeKeys: scope, urgencyOf: _urgencyOf);
+  final r = parseUtterance(utterance, urgencyOf: _urgencyOf);
   final problems = <String>[];
   if (r.outcome != outcome)
     problems.add('outcome ${r.outcome.name} != ${outcome.name}');
@@ -33,6 +33,9 @@ void expectIntent(
   }
   if (checkAsk && r.ask != ask) {
     problems.add('ask ${r.ask} != $ask');
+  }
+  if (mustSuggest != null && !r.alternatives.contains(mustSuggest)) {
+    problems.add('Vorschlaege ${r.alternatives} ohne $mustSuggest');
   }
   if (problems.isEmpty) {
     print(
@@ -130,6 +133,18 @@ void main() {
   );
   // Ohne Marker bleibt ask offen — dann entscheidet der Umschalter im Sender.
   expectIntent('verbandskasten', key: 'verbandskasten', checkAsk: true);
+
+  print('\n=== Bereichsunabhaengig: exakte Treffer senden immer ===');
+  expectIntent('bremse', key: 'bremse'); // Fahrzeug-Key, auch im Fahrt-Tab
+  expectIntent('links', key: 'links'); // Fahrt-Key, auch im Fahrzeug-Tab
+
+  print('\n=== Aehnlichkeits-Vorschlaege bei Nicht-Treffern ===');
+  expectIntent('hup', outcome: ParseOutcome.unmatched, mustSuggest: 'hupe');
+  expectIntent(
+    'warndreiek',
+    outcome: ParseOutcome.unmatched,
+    mustSuggest: 'warndreieck',
+  );
 
   print('\n=== Fuellwoerter duerfen nichts ausloesen ===');
   expectIntent('das ist halt so', outcome: ParseOutcome.unmatched);

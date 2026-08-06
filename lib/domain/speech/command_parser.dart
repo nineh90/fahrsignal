@@ -4,9 +4,10 @@
 /// die gesamte Sprachlogik ohne Gerät testbar; die Spracherkennung liefert nur
 /// einen String und eine Konfidenz hinein.
 ///
-/// Bewusst deterministisch und erklärbar statt „schlau": kein Fuzzy-Matching,
-/// keine Statistik. Wenn im Auto etwas falsch erkannt wird, muss man in einer
-/// Tabelle nachsehen können, warum – und es dort korrigieren.
+/// Bewusst deterministisch und erklärbar statt „schlau": exakte Phrasen
+/// entscheiden, was gesendet wird. Ähnlichkeitssuche (Editierdistanz) gibt es
+/// **nur** als Rückfrage-Vorschlag, wenn nichts exakt getroffen hat – sie
+/// löst nie selbst einen Sendevorgang aus.
 library;
 
 import '../command_phrases.dart';
@@ -188,14 +189,13 @@ class _Hit {
 
 /// Übersetzt [transcript] in eine [ParsedIntent].
 ///
-/// [asrConfidence] ist die Konfidenz der Spracherkennung (0..1);
-/// [scopeKeys] sind die Keys des aktuell im Sender gewählten Bereichs – Treffer
-/// außerhalb werden abgewertet, aber nicht ausgeschlossen (so bleibt „Felgen"
-/// im Fahrzeugmodus erreichbar, verliert im Fahrtmodus aber gegen „folgen").
+/// [asrConfidence] ist die Konfidenz der Spracherkennung (0..1). Eine
+/// Bereichs-Eingrenzung gibt es bewusst nicht mehr: Was exakt erkannt wurde,
+/// wird ausgeführt, egal welcher Tab im Sender offen ist – Rückfragen sind
+/// unklarer Erkennung vorbehalten.
 ParsedIntent parseUtterance(
   String transcript, {
   double asrConfidence = 1.0,
-  Set<String>? scopeKeys,
   Urgency Function(String key)? urgencyOf,
 }) {
   final normalized = normalizeUtterance(transcript);
@@ -296,12 +296,21 @@ ParsedIntent parseUtterance(
     }
   }
 
-  // --- 5. Kein Treffer → Freitext ------------------------------------------
+  // --- 5. Kein Treffer → Ähnlichkeits-Vorschläge + Freitext ----------------
+  // „hup" statt „hupe" soll nicht im Nichts enden: die nächstliegenden
+  // Katalogphrasen kommen als Vorschläge in die Rückfrage. Gesendet wird
+  // davon nichts automatisch.
   if (hits.isEmpty) {
+    final residual = [
+      for (var k = 0; k < tokens.length; k++)
+        if (!consumed[k] && !kFillerWords.contains(tokens[k])) tokens[k],
+    ].join(' ');
     return ParsedIntent(
       outcome: ParseOutcome.unmatched,
       transcript: transcript,
       normalized: normalized,
+      ask: ask,
+      alternatives: fuzzySuggestions(residual),
       confidence: 0,
     );
   }
@@ -336,6 +345,7 @@ ParsedIntent parseUtterance(
         outcome: ParseOutcome.unmatched,
         transcript: transcript,
         normalized: normalized,
+        ask: ask,
       );
     }
   }
@@ -362,19 +372,17 @@ ParsedIntent parseUtterance(
       ? 0.0
       : (consumedCount / meaningful).clamp(0.0, 1.0);
 
-  var confidence = asrConfidence * (0.45 + 0.55 * coverage);
-
-  // Treffer außerhalb des gewählten Bereichs sind plausibel, aber weniger
-  // wahrscheinlich – halbieren statt ausschließen.
-  if (scopeKeys != null && !scopeKeys.contains(keys.first)) {
-    confidence *= 0.5;
-  }
+  final confidence = asrConfidence * (0.45 + 0.55 * coverage);
 
   if (confidence < kMinConfidence) {
+    // Zu unsicher zum Senden – aber das Erkannte als Vorschlag anbieten,
+    // statt es zu verschlucken.
     return ParsedIntent(
       outcome: ParseOutcome.unmatched,
       transcript: transcript,
       normalized: normalized,
+      ask: ask,
+      alternatives: keys.take(3).toList(),
       confidence: confidence,
     );
   }
@@ -390,4 +398,66 @@ ParsedIntent parseUtterance(
     transcript: transcript,
     normalized: normalized,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Ähnlichkeits-Vorschläge (nur Rückfrage, nie Auto-Send)
+// ---------------------------------------------------------------------------
+
+/// Ab dieser Ähnlichkeit (1 − Editierdistanz/Länge) wird eine Phrase
+/// vorgeschlagen. 0,6 lässt „hup"→„hupe" und „stob"→„stopp" durch, hält aber
+/// zufällige Kurzwort-Treffer draußen.
+const double kSuggestThreshold = 0.6;
+
+/// Nächstliegende Katalog-Keys zu einer nicht exakt erkannten Äußerung,
+/// bestpassende zuerst (max. 3, je Key nur einmal).
+List<String> fuzzySuggestions(String utterance) {
+  final s = utterance.trim();
+  if (s.length < 3) return const [];
+
+  final bestPerKey = <String, double>{};
+  for (final entry in _index().entries) {
+    final phrase = entry.key;
+    if (phrase.length < 3) continue;
+    // Editierdistanz kann die Längendifferenz nie unterschreiten – so
+    // entfallen aussichtslose Vergleiche, bevor gerechnet wird.
+    final maxLen = s.length > phrase.length ? s.length : phrase.length;
+    if ((s.length - phrase.length).abs() / maxLen > 1 - kSuggestThreshold) {
+      continue;
+    }
+    final sim = 1 - _levenshtein(s, phrase) / maxLen;
+    if (sim < kSuggestThreshold) continue;
+    final prev = bestPerKey[entry.value];
+    if (prev == null || sim > prev) bestPerKey[entry.value] = sim;
+  }
+
+  final ranked = bestPerKey.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return [for (final e in ranked.take(3)) e.key];
+}
+
+/// Klassische Levenshtein-Distanz mit zwei Zeilen Speicher.
+int _levenshtein(String a, String b) {
+  if (a == b) return 0;
+  if (a.isEmpty) return b.length;
+  if (b.isEmpty) return a.length;
+
+  var prev = List<int>.generate(b.length + 1, (j) => j);
+  var curr = List<int>.filled(b.length + 1, 0);
+
+  for (var i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (var j = 1; j <= b.length; j++) {
+      final cost = a.codeUnitAt(i - 1) == b.codeUnitAt(j - 1) ? 0 : 1;
+      curr[j] = [
+        curr[j - 1] + 1, // Einfügen
+        prev[j] + 1, // Löschen
+        prev[j - 1] + cost, // Ersetzen
+      ].reduce((x, y) => x < y ? x : y);
+    }
+    final tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+  return prev[b.length];
 }
