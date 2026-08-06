@@ -5,6 +5,7 @@ import '../domain/drive_command.dart';
 import '../providers.dart';
 import '../transport/signal_transport.dart';
 import 'brand.dart';
+import 'ptt_panel.dart';
 import 'traffic_signs.dart';
 
 /// Senderansicht (Fahrlehrer:in). Zwei umschaltbare Bereiche (Fahrt /
@@ -22,6 +23,13 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   bool _combo = false;
   bool _ask = false; // Fahrzeug: Erklären (false) vs. Abfragen (true)
   final List<CommandDef> _staged = [];
+
+  /// Keys des aktuell gewählten Bereichs – grenzt die Spracherkennung ein,
+  /// damit „Felgen" im Fahrtmodus nicht gegen „Straße folgen" gewinnt.
+  Set<String> get _scopeKeys => {
+    for (final cat in categoriesInMode(_mode))
+      for (final d in commandsInCategory(cat)) d.key,
+  };
 
   void _tap(CommandDef d) {
     if (_combo) {
@@ -102,6 +110,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
         ref.watch(connectionStreamProvider).asData?.value ==
         TransportState.connected;
     final stagedKeys = _staged.map((d) => d.key).toSet();
+    final inputMode = ref.watch(senderInputModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -169,7 +178,32 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
               ),
             ),
           ),
-          if (_mode == DashboardMode.fahrzeug)
+          // Eingabeweg: Kacheln oder Sprache. Der Bereichsumschalter darüber
+          // bleibt in beiden Fällen sichtbar – er grenzt auch die
+          // Spracherkennung ein.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            child: SegmentedButton<SenderInputMode>(
+              segments: const [
+                ButtonSegment(
+                  value: SenderInputMode.buttons,
+                  icon: Icon(Icons.grid_view),
+                  label: Text('Tasten'),
+                ),
+                ButtonSegment(
+                  value: SenderInputMode.ptt,
+                  icon: Icon(Icons.mic),
+                  label: Text('Sprechen'),
+                ),
+              ],
+              selected: {inputMode},
+              showSelectedIcon: false,
+              onSelectionChanged: (s) =>
+                  ref.read(senderInputModeProvider.notifier).set(s.first),
+            ),
+          ),
+          if (inputMode == SenderInputMode.buttons &&
+              _mode == DashboardMode.fahrzeug)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
               child: SegmentedButton<bool>(
@@ -191,18 +225,20 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
               ),
             ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              children: [
-                for (final cat in categoriesInMode(_mode))
-                  _CategorySection(
-                    cat: cat,
-                    combo: _combo,
-                    stagedKeys: stagedKeys,
-                    onTap: _tap,
+            child: inputMode == SenderInputMode.ptt
+                ? PttPanel(scopeKeys: _scopeKeys)
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    children: [
+                      for (final cat in categoriesInMode(_mode))
+                        _CategorySection(
+                          cat: cat,
+                          combo: _combo,
+                          stagedKeys: stagedKeys,
+                          onTap: _tap,
+                        ),
+                    ],
                   ),
-              ],
-            ),
           ),
         ],
       ),

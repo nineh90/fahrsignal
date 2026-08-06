@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'command_phrases.dart';
 import 'drive_command.dart';
 
 /// Vollflächige Hintergrundfarbe der Empfänger-Anzeige je Dringlichkeit
@@ -974,6 +975,22 @@ List<CommandDef> commandsInCategory(CommandCategory c) =>
 /// Kategorien eines Modus in Enum-Reihenfolge.
 List<CommandCategory> categoriesInMode(DashboardMode m) =>
     CommandCategory.values.where((c) => c.mode == m).toList();
+
+/// Beschriftung eines Kommandos **inklusive Ordnungszahl**.
+///
+/// „zweite Straße links" wird als `abbiegen_links` mit `ord: 2` übertragen;
+/// erst hier entsteht daraus wieder ein lesbarer Text. Das Zählnomen kommt
+/// aus `kOrdinalNoun`, damit „2. Straße links" und nicht „2. Links" dasteht.
+String displayLabel(DriveCommand c) {
+  final def = commandByKey(c.key);
+  final base = def?.label ?? c.key;
+  if (!c.hasOrdinal) return base;
+  final noun = kOrdinalNoun[c.key];
+  if (noun == null) return '${c.ord}. $base';
+  // „Abbiegen links" → „2. Straße links"
+  final direction = base.toLowerCase().contains('rechts') ? 'rechts' : 'links';
+  return '${c.ord}. $noun $direction';
+}
 
 /// Positives Lob (Empfänger wird grün statt urgency-farbig).
 bool isPositiveFeedback(String key) => key == 'lob' || key == 'perfekt';

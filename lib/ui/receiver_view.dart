@@ -239,9 +239,29 @@ class _CommandDisplay extends StatelessWidget {
       return _ExplainedDisplay(def: primary, fg: fg, ask: c.ask);
     }
     final secondaries = c.keys.skip(1).map(commandByKey).nonNulls.toList();
-    final visual = primary != null && primary.isSign
+    final baseVisual = primary != null && primary.isSign
         ? TrafficSign(def: primary, size: 172)
         : Icon(primary?.icon ?? Icons.info, color: fg, size: 150);
+
+    // Ordnungszahl als Plakette am Symbol: „zweite Straße links" muss auf
+    // einen Blick von „links" unterscheidbar sein.
+    final visual = c.hasOrdinal
+        ? Stack(
+            clipBehavior: Clip.none,
+            children: [
+              baseVisual,
+              Positioned(
+                top: -6,
+                right: -10,
+                child: _OrdinalBadge(
+                  ord: c.ord,
+                  fg: fg,
+                  bg: commandColor(c),
+                ),
+              ),
+            ],
+          )
+        : baseVisual;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -251,7 +271,7 @@ class _CommandDisplay extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            (primary?.label ?? c.keys.first).toUpperCase(),
+            displayLabel(c).toUpperCase(),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: fg,
@@ -273,6 +293,36 @@ class _CommandDisplay extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Ordnungszahl-Plakette am Symbol („2." bei „zweite Straße links").
+/// Gefüllter Kreis in der Vordergrundfarbe, Ziffer im Flächenton – dadurch
+/// bleibt sie auf blauem, gelbem und rotem Grund gleich gut lesbar.
+class _OrdinalBadge extends StatelessWidget {
+  final int ord;
+  final Color fg;
+  final Color bg;
+
+  const _OrdinalBadge({required this.ord, required this.fg, required this.bg});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 66,
+      height: 66,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+      child: Text(
+        '$ord.',
+        style: TextStyle(
+          color: bg,
+          fontSize: 34,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
     );
   }
 }
@@ -453,7 +503,9 @@ class _HistoryChip extends StatelessWidget {
           Icon(def?.icon ?? Icons.info, color: fg, size: 17),
           const SizedBox(width: 6),
           Text(
-            def?.label ?? cmd.keys.first,
+            // Trägt die Ordnungszahl mit: sonst stünden „links" und
+            // „2. Straße links" im Verlauf identisch da.
+            cmd.isFreitext ? cmd.text : displayLabel(cmd),
             style: TextStyle(
               color: fg,
               fontSize: 12.5,
