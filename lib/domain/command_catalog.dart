@@ -162,6 +162,14 @@ class CommandDef {
 }
 
 /// Ausgangskatalog. Erweiterbar; später ggf. konfigurierbar je Fahrschule.
+///
+/// **Urgency-Regel** (steuert Farbe + Vibration beim Empfänger – nach
+/// Reaktionsdringlichkeit vergeben, nicht nach Wichtigkeit des Themas):
+/// - `dringend` (rot): sofort reagieren – Gefahr für Menschen, Bremsen/Stopp.
+/// - `achtung` (gelb): erhöhte Vorsicht bzw. Verhalten im Fahrbetrieb
+///   korrigieren (langsamer, Abstand, Vorfahrt gewähren …).
+/// - `info` (blau): normale Anweisungen sowie alles Lernen, Feedback und
+///   Coaching – der gesamte Fahrzeug-Bereich ist deshalb durchgehend blau.
 const List<CommandDef> kCommandCatalog = [
   // ===== Modus FAHRT =====
   // --- Gefahr ---
@@ -311,7 +319,7 @@ const List<CommandDef> kCommandCatalog = [
     'rueckwaerts',
     'Rückwärts',
     Icons.arrow_downward,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.richtung,
   ),
   CommandDef(
@@ -378,7 +386,7 @@ const List<CommandDef> kCommandCatalog = [
     'schulterblick',
     'Schulterblick',
     Icons.threesixty,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.hinweis,
   ),
   CommandDef(
@@ -466,7 +474,7 @@ const List<CommandDef> kCommandCatalog = [
     'fehler',
     'Nicht gut',
     Icons.thumb_down,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.feedback,
   ),
 
@@ -485,7 +493,7 @@ const List<CommandDef> kCommandCatalog = [
     'bremse',
     'Bremse',
     Icons.report,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.abfahrt,
     explanation:
         'Bremspedal treten: Der Widerstand muss fest sein und darf nicht bis zum Boden durchgehen. Das Fahrzeug darf mit angezogener Bremse nicht wegrollen.',
@@ -577,7 +585,7 @@ const List<CommandDef> kCommandCatalog = [
     'warnblinker',
     'Warnblinker',
     Icons.warning,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.beleuchtung,
     explanation:
         'Alle Blinker gleichzeitig. Warnt andere bei Panne, Stauende oder Gefahr.',
@@ -624,7 +632,7 @@ const List<CommandDef> kCommandCatalog = [
     'profil',
     'Profiltiefe',
     Icons.donut_large,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.reifen,
     explanation:
         'Mindestens 1,6 mm sind vorgeschrieben. Empfohlen werden 3 mm (Sommer) bzw. 4 mm (Winter). Ein 1-Euro-Stück hilft beim Schätzen.',
@@ -642,7 +650,7 @@ const List<CommandDef> kCommandCatalog = [
     'reifenzustand',
     'Reifenzustand',
     Icons.trip_origin,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.reifen,
     explanation:
         'Auf Risse, Beulen, Fremdkörper und gleichmäßigen Abrieb achten.',
@@ -680,7 +688,7 @@ const List<CommandDef> kCommandCatalog = [
     'bremsfluessigkeit',
     'Bremsflüssigkeit',
     Icons.invert_colors,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.fluessigkeit,
     explanation:
         'Füllstand im Behälter zwischen Min und Max. Zu wenig kann auf Verschleiß oder eine Undichtigkeit hindeuten.',
@@ -883,7 +891,7 @@ const List<CommandDef> kCommandCatalog = [
     'konzentration',
     'Konzentration',
     Icons.psychology_alt,
-    Urgency.achtung,
+    Urgency.info,
     CommandCategory.coaching,
   ),
   CommandDef(

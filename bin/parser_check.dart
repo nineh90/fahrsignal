@@ -49,12 +49,9 @@ const _urgencies = <String, Urgency>{
   'bremsen': Urgency.dringend,
   'stopp': Urgency.dringend,
   'langsamer': Urgency.achtung,
-  'schulterblick': Urgency.achtung,
   'abstand': Urgency.achtung,
-  'rueckwaerts': Urgency.achtung,
   'achtung': Urgency.dringend,
   'hindernis': Urgency.dringend,
-  'fehler': Urgency.achtung,
 };
 Urgency _urgencyOf(String key) => _urgencies[key] ?? Urgency.info;
 
