@@ -21,7 +21,10 @@ class SenderGrid extends ConsumerStatefulWidget {
 
 class _SenderGridState extends ConsumerState<SenderGrid> {
   DashboardMode _mode = DashboardMode.fahrt;
-  bool _ask = false; // Fahrzeug: Erklären (false) vs. Abfragen (true)
+  // Fahrzeug: Abfragen (true) vs. Erklären (false). Abfragen ist Standard –
+  // die Fahrlehrperson prüft üblicherweise, statt vorzutragen; „erkläre …"
+  // per Sprache (oder der Umschalter) holt gezielt die Erklärung.
+  bool _ask = true;
 
   /// Scope für die Spracherkennung. Alles Fahrbetriebsrelevante (Fahrt,
   /// Zeichen, Fahrschüler) ist **immer** im Scope – das Auto fährt weiter,
@@ -171,14 +174,14 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
               child: SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(
-                    value: false,
-                    icon: Icon(Icons.menu_book),
-                    label: Text('Erklären'),
-                  ),
-                  ButtonSegment(
                     value: true,
                     icon: Icon(Icons.quiz),
                     label: Text('Abfragen'),
+                  ),
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.menu_book),
+                    label: Text('Erklären'),
                   ),
                 ],
                 selected: {_ask},
