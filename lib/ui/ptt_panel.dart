@@ -33,7 +33,6 @@ class _PttPanelState extends ConsumerState<PttPanel> {
 
   bool _holding = false;
   bool _listening = false;
-  bool _warmedUp = false;
   String _interim = '';
 
   /// Letztes Ergebnis, das zur Auswahl steht (unsicher/mehrdeutig).
@@ -117,12 +116,35 @@ class _PttPanelState extends ConsumerState<PttPanel> {
   Future<void> _startHold() async {
     final recognizer = ref.read(speechRecognizerProvider);
     if (!recognizer.isSupported) return;
+
+    // Falls beim Umschalten noch nicht gefragt wurde (oder abgelehnt war),
+    // hier nachholen – auch das ist eine echte Nutzergeste.
+    if (ref.read(micPermissionProvider) != true) {
+      final granted = await recognizer.warmUp();
+      if (!mounted) return;
+      ref.read(micPermissionProvider.notifier).set(granted);
+      if (!granted) {
+        _showError(recognizer.lastError);
+        return;
+      }
+    }
+
     setState(() {
       _holding = true;
       _pending = null;
       _interim = '';
     });
     await recognizer.start();
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message.isEmpty ? 'Mikrofon nicht verfügbar' : message),
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   Future<void> _endHold() async {
@@ -132,21 +154,17 @@ class _PttPanelState extends ConsumerState<PttPanel> {
   }
 
   Future<void> _warmUp() async {
-    final ok = await ref.read(speechRecognizerProvider).warmUp();
+    final recognizer = ref.read(speechRecognizerProvider);
+    final granted = await recognizer.warmUp();
     if (!mounted) return;
-    setState(() => _warmedUp = ok);
-    if (!ok) {
-      final message = ref.read(speechRecognizerProvider).lastError;
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message.isEmpty ? 'Mikrofon nicht verfügbar' : message)),
-      );
-    }
+    ref.read(micPermissionProvider.notifier).set(granted);
+    if (!granted) _showError(recognizer.lastError);
   }
 
   @override
   Widget build(BuildContext context) {
     final recognizer = ref.watch(speechRecognizerProvider);
+    final micGranted = ref.watch(micPermissionProvider);
     final theme = Theme.of(context);
 
     if (!recognizer.isSupported) {
@@ -162,15 +180,34 @@ class _PttPanelState extends ConsumerState<PttPanel> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       children: [
-        if (!_warmedUp)
+        // Nur zeigen, wenn die Freigabe fehlt. Ist sie erteilt, wäre der Knopf
+        // nur Ballast auf einem Bildschirm, der im Auto schnell lesbar sein muss.
+        if (micGranted != true)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: FilledButton.tonalIcon(
               onPressed: _warmUp,
-              icon: const Icon(Icons.mic_none),
-              label: const Text('Mikrofon aktivieren'),
+              icon: Icon(
+                micGranted == false ? Icons.mic_off : Icons.mic_none,
+              ),
+              label: Text(
+                micGranted == false
+                    ? 'Mikrofon erneut anfragen'
+                    : 'Mikrofon aktivieren',
+              ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ),
+        if (micGranted == false)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              recognizer.lastError,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
               ),
             ),
           ),

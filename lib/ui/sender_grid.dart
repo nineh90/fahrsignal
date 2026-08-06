@@ -24,6 +24,19 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   bool _ask = false; // Fahrzeug: Erklären (false) vs. Abfragen (true)
   final List<CommandDef> _staged = [];
 
+  Future<void> _selectInputMode(SenderInputMode mode) async {
+    ref.read(senderInputModeProvider.notifier).set(mode);
+    if (mode != SenderInputMode.ptt) return;
+    if (ref.read(micPermissionProvider) == true) return;
+
+    final recognizer = ref.read(speechRecognizerProvider);
+    if (!recognizer.isSupported) return;
+
+    final granted = await recognizer.warmUp();
+    if (!mounted) return;
+    ref.read(micPermissionProvider.notifier).set(granted);
+  }
+
   /// Keys des aktuell gewählten Bereichs – grenzt die Spracherkennung ein,
   /// damit „Felgen" im Fahrtmodus nicht gegen „Straße folgen" gewinnt.
   Set<String> get _scopeKeys => {
@@ -198,8 +211,10 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
               ],
               selected: {inputMode},
               showSelectedIcon: false,
-              onSelectionChanged: (s) =>
-                  ref.read(senderInputModeProvider.notifier).set(s.first),
+              // Beim Umschalten auf Sprache gleich nach der Mikrofonfreigabe
+              // fragen: das ist eine echte Nutzergeste, die Safari verlangt –
+              // und es passiert, während das Auto noch steht.
+              onSelectionChanged: (s) => _selectInputMode(s.first),
             ),
           ),
           if (inputMode == SenderInputMode.buttons &&

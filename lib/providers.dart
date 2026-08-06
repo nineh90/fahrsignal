@@ -65,6 +65,19 @@ final senderInputModeProvider =
       SenderInputModeNotifier.new,
     );
 
+/// Mikrofonfreigabe: `null` = noch nicht gefragt, `true` = erteilt,
+/// `false` = abgelehnt. Wird geteilt, damit der Umschalter danach fragen kann
+/// und das Bedienteil weiß, ob es einen Hinweis zeigen muss.
+class MicPermissionNotifier extends Notifier<bool?> {
+  @override
+  bool? build() => null;
+
+  void set(bool? granted) => state = granted;
+}
+
+final micPermissionProvider =
+    NotifierProvider<MicPermissionNotifier, bool?>(MicPermissionNotifier.new);
+
 /// Skript für den Fake-Erkenner: erlaubt die Vorführung ohne Mikrofon und
 /// ist zugleich der Dev-Loop am Linux-Desktop.
 const _fakeSpeech = bool.fromEnvironment('FAKE_SPEECH');

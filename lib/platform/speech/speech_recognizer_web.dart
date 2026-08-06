@@ -59,6 +59,22 @@ extension type _ErrorEvent._(JSObject _) implements JSObject {
   external String get error;
 }
 
+extension type _Navigator._(JSObject _) implements JSObject {
+  external _MediaDevices? get mediaDevices;
+}
+
+extension type _MediaDevices._(JSObject _) implements JSObject {
+  external JSPromise<_MediaStream> getUserMedia(JSObject constraints);
+}
+
+extension type _MediaStream._(JSObject _) implements JSObject {
+  external JSArray<_MediaTrack> getTracks();
+}
+
+extension type _MediaTrack._(JSObject _) implements JSObject {
+  external void stop();
+}
+
 /// Maximale Zahl automatischer Neustarts pro Haltevorgang. Verhindert eine
 /// Endlosschleife, wenn das Mikrofon dauerhaft nichts liefert.
 const int _maxRestarts = 5;
@@ -173,15 +189,35 @@ class WebSpeechRecognizer implements SpeechRecognizer {
 
   @override
   Future<bool> warmUp() async {
-    if (_recognition == null) return false;
-    // Kurz öffnen und gleich wieder schließen: löst den Berechtigungsdialog
-    // aus, während das Auto noch steht.
+    // Explizit übers Mikrofon fragen statt die Erkennung kurz anzutippen:
+    // getUserMedia löst den Berechtigungsdialog aus **und** liefert eine
+    // belastbare Antwort. Ein kurzer Start der Erkennung täte das nicht —
+    // dort käme eine Ablehnung erst später als `not-allowed`-Event.
+    //
+    // Muss aus einer echten Nutzergeste heraus laufen; deshalb hängt der
+    // Aufruf am Umschalten auf „Sprechen" bzw. am Mikrofonknopf.
+    final navigator = globalContext['navigator'];
+    if (navigator == null) return false;
+    final devices = _Navigator._(navigator as JSObject).mediaDevices;
+    if (devices == null) {
+      _lastError = 'Mikrofonzugriff erfordert eine sichere Verbindung (HTTPS).';
+      return false;
+    }
+
     try {
-      _recognition!.start();
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      _recognition!.stop();
+      final constraints = {'audio': true}.jsify() as JSObject;
+      final stream = await devices.getUserMedia(constraints).toDart;
+      // Sofort wieder freigeben – wir wollten nur die Freigabe, keine Aufnahme.
+      for (final track in stream.getTracks().toDart) {
+        track.stop();
+      }
+      _lastError = '';
       return true;
     } catch (_) {
+      _lastError =
+          'Mikrofon nicht freigegeben. In Safari über „aA" in der Adresszeile '
+          '→ Website-Einstellungen → Mikrofon erlauben.';
+      _statusCtrl.add(SpeechStatus.error);
       return false;
     }
   }
