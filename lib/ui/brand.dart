@@ -20,13 +20,17 @@ const List<Color> kBrandRainbow = [
 const String kBrandTagline = 'Verstehen verbindet. Mobilität für alle.';
 
 /// App-Theme aus den Markenfarben – dezent: Navy-Header, Blau als Seed,
-/// Regenbogen bleibt den Kategorien vorbehalten.
+/// Regenbogen bleibt den Kategorien vorbehalten. Einheitliche Formsprache:
+/// Radius 14 für Bedienelemente, 16 für Flächen (Karten, Dialoge).
 ThemeData fahrSignalTheme(Brightness brightness) {
   final scheme = ColorScheme.fromSeed(
     seedColor: kBrandBlue,
     brightness: brightness,
   );
   final dark = brightness == Brightness.dark;
+  final controlShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(14),
+  );
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
@@ -37,6 +41,61 @@ ThemeData fahrSignalTheme(Brightness brightness) {
       backgroundColor: kBrandNavy,
       foregroundColor: Colors.white,
       elevation: 0,
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        shape: controlShape,
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(shape: controlShape),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(shape: controlShape),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        shape: controlShape,
+        side: BorderSide(color: scheme.outlineVariant),
+        selectedBackgroundColor: dark ? scheme.primaryContainer : kBrandNavy,
+        selectedForegroundColor: dark
+            ? scheme.onPrimaryContainer
+            : Colors.white,
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      color: scheme.surfaceContainerLow,
+    ),
+    dialogTheme: DialogThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: scheme.surfaceContainerLowest,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: scheme.primary, width: 2),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      actionTextColor: dark ? scheme.primary : const Color(0xFF8AB4F8),
     ),
   );
 }

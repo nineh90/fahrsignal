@@ -10,7 +10,8 @@ import 'traffic_signs.dart';
 
 /// Senderansicht (Fahrlehrer:in). Zwei umschaltbare Bereiche (Fahrt /
 /// Fahrzeug), nach Kategorien in Regenbogenfarben getrennt. Einzeltipp sendet
-/// sofort; im Kombi-Modus lassen sich 2–3 Kommandos bündeln.
+/// sofort; die Push-to-talk-Leiste unten ist **immer** verfügbar – Kombis
+/// („links und dann rechts") gehen ausschließlich über Sprache.
 class SenderGrid extends ConsumerStatefulWidget {
   const SenderGrid({super.key});
 
@@ -20,22 +21,7 @@ class SenderGrid extends ConsumerStatefulWidget {
 
 class _SenderGridState extends ConsumerState<SenderGrid> {
   DashboardMode _mode = DashboardMode.fahrt;
-  bool _combo = false;
   bool _ask = false; // Fahrzeug: Erklären (false) vs. Abfragen (true)
-  final List<CommandDef> _staged = [];
-
-  Future<void> _selectInputMode(SenderInputMode mode) async {
-    ref.read(senderInputModeProvider.notifier).set(mode);
-    if (mode != SenderInputMode.ptt) return;
-    if (ref.read(micPermissionProvider) == true) return;
-
-    final recognizer = ref.read(speechRecognizerProvider);
-    if (!recognizer.isSupported) return;
-
-    final granted = await recognizer.warmUp();
-    if (!mounted) return;
-    ref.read(micPermissionProvider.notifier).set(granted);
-  }
 
   /// Keys des aktuell gewählten Bereichs – grenzt die Spracherkennung ein,
   /// damit „Felgen" im Fahrtmodus nicht gegen „Straße folgen" gewinnt.
@@ -45,12 +31,6 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   };
 
   void _tap(CommandDef d) {
-    if (_combo) {
-      if (_staged.length < 3 && !_staged.any((s) => s.key == d.key)) {
-        setState(() => _staged.add(d));
-      }
-      return;
-    }
     ref
         .read(transportProvider)
         .sendCommand(
@@ -92,38 +72,12 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
     }
   }
 
-  void _sendCombo() {
-    if (_staged.isEmpty) return;
-    final labels = _staged.map((d) => d.label).join(' + ');
-    ref
-        .read(transportProvider)
-        .sendCommand(
-          DriveCommand.combo(
-            _staged.map((d) => d.key).toList(),
-            maxUrgency(_staged.map((d) => d.urgency)),
-          ),
-        );
-    // One-Shot: nach dem Senden Kombi-Modus sofort wieder deaktivieren.
-    setState(() {
-      _staged.clear();
-      _combo = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Gesendet: $labels'),
-        duration: const Duration(milliseconds: 1200),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final room = ref.watch(roomCodeProvider);
     final connected =
         ref.watch(connectionStreamProvider).asData?.value ==
         TransportState.connected;
-    final stagedKeys = _staged.map((d) => d.key).toSet();
-    final inputMode = ref.watch(senderInputModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -174,51 +128,39 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<DashboardMode>(
-                segments: [
-                  for (final m in DashboardMode.values)
-                    ButtonSegment(
-                      value: m,
-                      icon: Icon(m.icon),
-                      label: Text(m.label),
-                    ),
-                ],
-                selected: {_mode},
-                showSelectedIcon: false,
-                onSelectionChanged: (s) => setState(() => _mode = s.first),
-              ),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                // Kein Scrollen: der Umschalter passt sich dem Platz an.
+                // Breit = Icon+Text, mittel = nur Text, schmal (Handy
+                // hochkant) = nur Icons mit Tooltip.
+                final showIcons = c.maxWidth >= 560;
+                final iconOnly = c.maxWidth < 400;
+                return SegmentedButton<DashboardMode>(
+                  segments: [
+                    for (final m in DashboardMode.values)
+                      ButtonSegment(
+                        value: m,
+                        icon: (showIcons || iconOnly) ? Icon(m.icon) : null,
+                        label: iconOnly
+                            ? null
+                            : Text(
+                                m.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                        tooltip: m.label,
+                      ),
+                  ],
+                  selected: {_mode},
+                  showSelectedIcon: false,
+                  expandedInsets: EdgeInsets.zero,
+                  onSelectionChanged: (s) => setState(() => _mode = s.first),
+                );
+              },
             ),
           ),
-          // Eingabeweg: Kacheln oder Sprache. Der Bereichsumschalter darüber
-          // bleibt in beiden Fällen sichtbar – er grenzt auch die
-          // Spracherkennung ein.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-            child: SegmentedButton<SenderInputMode>(
-              segments: const [
-                ButtonSegment(
-                  value: SenderInputMode.buttons,
-                  icon: Icon(Icons.grid_view),
-                  label: Text('Tasten'),
-                ),
-                ButtonSegment(
-                  value: SenderInputMode.ptt,
-                  icon: Icon(Icons.mic),
-                  label: Text('Sprechen'),
-                ),
-              ],
-              selected: {inputMode},
-              showSelectedIcon: false,
-              // Beim Umschalten auf Sprache gleich nach der Mikrofonfreigabe
-              // fragen: das ist eine echte Nutzergeste, die Safari verlangt –
-              // und es passiert, während das Auto noch steht.
-              onSelectionChanged: (s) => _selectInputMode(s.first),
-            ),
-          ),
-          if (inputMode == SenderInputMode.buttons &&
-              _mode == DashboardMode.fahrzeug)
+          if (_mode == DashboardMode.fahrzeug)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
               child: SegmentedButton<bool>(
@@ -236,38 +178,24 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
                 ],
                 selected: {_ask},
                 showSelectedIcon: false,
+                expandedInsets: EdgeInsets.zero,
                 onSelectionChanged: (s) => setState(() => _ask = s.first),
               ),
             ),
           Expanded(
-            child: inputMode == SenderInputMode.ptt
-                ? PttPanel(scopeKeys: _scopeKeys)
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                    children: [
-                      for (final cat in categoriesInMode(_mode))
-                        _CategorySection(
-                          cat: cat,
-                          combo: _combo,
-                          stagedKeys: stagedKeys,
-                          onTap: _tap,
-                        ),
-                    ],
-                  ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              children: [
+                for (final cat in categoriesInMode(_mode))
+                  _CategorySection(cat: cat, onTap: _tap),
+              ],
+            ),
           ),
         ],
       ),
-      bottomNavigationBar: _BottomBar(
-        combo: _combo,
-        staged: _staged,
+      bottomNavigationBar: _SenderBottomBar(
+        scopeKeys: _scopeKeys,
         onFreitext: _composeFreitext,
-        onToggleCombo: () => setState(() {
-          _combo = !_combo;
-          if (!_combo) _staged.clear();
-        }),
-        onRemove: (d) => setState(() => _staged.remove(d)),
-        onClear: () => setState(_staged.clear),
-        onSendCombo: _sendCombo,
         onOff: () => ref
             .read(transportProvider)
             .sendCommand(DriveCommand.now(kOffKey, Urgency.info)),
@@ -334,15 +262,8 @@ class _RainbowStrip extends StatelessWidget implements PreferredSizeWidget {
 
 class _CategorySection extends StatelessWidget {
   final CommandCategory cat;
-  final bool combo;
-  final Set<String> stagedKeys;
   final void Function(CommandDef) onTap;
-  const _CategorySection({
-    required this.cat,
-    required this.combo,
-    required this.stagedKeys,
-    required this.onTap,
-  });
+  const _CategorySection({required this.cat, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -378,12 +299,7 @@ class _CategorySection extends StatelessWidget {
             mainAxisSpacing: 10,
           ),
           itemCount: items.length,
-          itemBuilder: (_, i) => _CommandTile(
-            def: items[i],
-            combo: combo,
-            staged: stagedKeys.contains(items[i].key),
-            onTap: onTap,
-          ),
+          itemBuilder: (_, i) => _CommandTile(def: items[i], onTap: onTap),
         ),
         const SizedBox(height: 14),
       ],
@@ -393,24 +309,17 @@ class _CategorySection extends StatelessWidget {
 
 class _CommandTile extends StatelessWidget {
   final CommandDef def;
-  final bool combo;
-  final bool staged;
   final void Function(CommandDef) onTap;
-  const _CommandTile({
-    required this.def,
-    required this.combo,
-    required this.staged,
-    required this.onTap,
-  });
+  const _CommandTile({required this.def, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final color = tileColor(def);
     return Material(
       color: color,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: () => onTap(def),
         child: Stack(
           children: [
@@ -452,19 +361,6 @@ class _CommandTile extends StatelessWidget {
                 ),
               ),
             ),
-            // Kombi-Auswahl-Haken
-            if (combo && staged)
-              Positioned(
-                left: 6,
-                top: 6,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.check_circle, size: 18, color: color),
-                ),
-              ),
           ],
         ),
       ),
@@ -472,141 +368,58 @@ class _CommandTile extends StatelessWidget {
   }
 }
 
-class _BottomBar extends StatelessWidget {
-  final bool combo;
-  final List<CommandDef> staged;
+/// Untere Leiste des Senders: dauerhafte Push-to-talk-Leiste plus die zwei
+/// Nebenwege (Anzeige aus, Freitext) – bewusst flach gehalten, damit der
+/// Halteknopf dominiert.
+class _SenderBottomBar extends StatelessWidget {
+  final Set<String> scopeKeys;
   final VoidCallback onFreitext;
-  final VoidCallback onToggleCombo;
-  final void Function(CommandDef) onRemove;
-  final VoidCallback onClear;
-  final VoidCallback onSendCombo;
   final VoidCallback onOff;
-  const _BottomBar({
-    required this.combo,
-    required this.staged,
+  const _SenderBottomBar({
+    required this.scopeKeys,
     required this.onFreitext,
-    required this.onToggleCombo,
-    required this.onRemove,
-    required this.onClear,
-    required this.onSendCombo,
     required this.onOff,
   });
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (combo)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    staged.isEmpty
-                        ? 'Kachel(n) antippen, um zu kombinieren (max. 3)'
-                        : 'Kombination (${staged.length}/3)',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  if (staged.isNotEmpty)
-                    SizedBox(
-                      height: 40,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          for (final d in staged)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: InputChip(
-                                avatar: Icon(
-                                  d.icon,
-                                  size: 18,
-                                  color: tileColor(d),
-                                ),
-                                label: Text(d.label),
-                                onDeleted: () => onRemove(d),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: staged.isEmpty ? null : onSendCombo,
-                          icon: const Icon(Icons.send),
-                          label: Text('Senden (${staged.length})'),
-                        ),
-                      ),
-                      if (staged.isNotEmpty)
-                        TextButton(
-                          onPressed: onClear,
-                          child: const Text('Leeren'),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PttBar(scopeKeys: scopeKeys),
+            const SizedBox(height: 8),
+            Row(
               children: [
-                // Freie Anweisung – prominent und direkt erreichbar.
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: FilledButton.tonalIcon(
-                    onPressed: onFreitext,
-                    icon: const Icon(Icons.edit_note),
-                    label: const Text('Freie Anweisung schreiben'),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: FilledButton.tonalIcon(
+                      onPressed: onOff,
+                      icon: const Icon(Icons.visibility_off, size: 20),
+                      label: const Text('Anzeige aus'),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 52,
-                        child: FilledButton.tonalIcon(
-                          onPressed: onOff,
-                          icon: const Icon(Icons.visibility_off),
-                          label: const Text('Anzeige aus'),
-                        ),
-                      ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: FilledButton.tonalIcon(
+                      onPressed: onFreitext,
+                      icon: const Icon(Icons.edit_note, size: 20),
+                      label: const Text('Freie Anweisung'),
                     ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      height: 52,
-                      child: FilledButton.icon(
-                        onPressed: onToggleCombo,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: combo
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                          foregroundColor: combo
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Theme.of(context).colorScheme.onSurface,
-                        ),
-                        icon: Icon(combo ? Icons.layers_clear : Icons.layers),
-                        label: Text(combo ? 'Fertig' : 'Kombi'),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -21,7 +21,12 @@ library;
 const Map<String, List<String>> kCommandPhrases = {
   // ===================== MODUS FAHRT =====================
   // --- Gefahr ---
-  'kinder': ['kinder', 'achtung kinder', 'kind am strassenrand', 'spielende kinder'],
+  'kinder': [
+    'kinder',
+    'achtung kinder',
+    'kind am strassenrand',
+    'spielende kinder',
+  ],
   'tiere': ['tiere', 'tier', 'wild', 'reh', 'tier auf der strasse'],
   'fussgaenger': ['fussgaenger', 'passant', 'person auf der fahrbahn'],
   'radfahrer': ['radfahrer', 'fahrradfahrer', 'fahrrad', 'velo'],
@@ -34,7 +39,12 @@ const Map<String, List<String>> kCommandPhrases = {
   // --- Richtung ---
   'links': ['links', 'nach links', 'linke seite'],
   'rechts': ['rechts', 'nach rechts', 'rechte seite'],
-  'geradeaus': ['geradeaus', 'gerade aus', 'weiter geradeaus', 'einfach geradeaus'],
+  'geradeaus': [
+    'geradeaus',
+    'gerade aus',
+    'weiter geradeaus',
+    'einfach geradeaus',
+  ],
   'abbiegen_links': [
     'links abbiegen',
     'abbiegen links',
@@ -57,12 +67,27 @@ const Map<String, List<String>> kCommandPhrases = {
   'ausfahrt1': ['erste ausfahrt', 'ausfahrt eins'],
   'ausfahrt2': ['zweite ausfahrt', 'ausfahrt zwei'],
   'ausfahrt3': ['dritte ausfahrt', 'ausfahrt drei'],
-  'folgen': ['der strasse folgen', 'strasse folgen', 'folge der strasse', 'weiter folgen'],
+  'folgen': [
+    'der strasse folgen',
+    'strasse folgen',
+    'folge der strasse',
+    'weiter folgen',
+  ],
   'rueckwaerts': ['rueckwaerts', 'zurueck setzen', 'rueckwaerts fahren'],
-  'seitwaerts': ['seitwaerts einparken', 'seitwaerts parken', 'laengs einparken'],
+  'seitwaerts': [
+    'seitwaerts einparken',
+    'seitwaerts parken',
+    'laengs einparken',
+  ],
 
   // --- Tempo ---
-  'langsamer': ['langsamer', 'mach langsam', 'langsam', 'runter vom gas', 'gas weg'],
+  'langsamer': [
+    'langsamer',
+    'mach langsam',
+    'langsam',
+    'runter vom gas',
+    'gas weg',
+  ],
   'schneller': ['schneller', 'mehr gas', 'zuegiger', 'etwas schneller'],
   'anhalten': ['anhalten', 'halt an', 'ranfahren', 'rechts ranfahren'],
   'bremsen': ['bremsen', 'brems', 'bremse jetzt'],
@@ -73,17 +98,39 @@ const Map<String, List<String>> kCommandPhrases = {
 
   // --- Hinweise ---
   'spiegel': ['spiegel', 'in den spiegel schauen', 'spiegel kontrollieren'],
-  'schulterblick': ['schulterblick', 'ueber die schulter schauen', 'toter winkel'],
+  'schulterblick': [
+    'schulterblick',
+    'ueber die schulter schauen',
+    'toter winkel',
+  ],
   'blinker': ['blinker', 'blinken', 'blinker setzen', 'blinker rein'],
   'abstand': ['abstand', 'mehr abstand', 'abstand halten', 'zu dicht'],
-  'gang': ['gang wechseln', 'schalten', 'hochschalten', 'runterschalten', 'gang raus'],
+  'gang': [
+    'gang wechseln',
+    'schalten',
+    'hochschalten',
+    'runterschalten',
+    'gang raus',
+  ],
 
   // ===================== MODUS ZEICHEN =====================
   'z_stop': ['stopp schild', 'stoppschild', 'haltelinie'],
-  'z_vorfahrt_gewaehren': ['vorfahrt gewaehren', 'vorfahrt achten', 'vorfahrt beachten'],
-  'z_vorfahrtstrasse': ['vorfahrtstrasse', 'vorfahrt strasse', 'du hast vorfahrt'],
+  'z_vorfahrt_gewaehren': [
+    'vorfahrt gewaehren',
+    'vorfahrt achten',
+    'vorfahrt beachten',
+  ],
+  'z_vorfahrtstrasse': [
+    'vorfahrtstrasse',
+    'vorfahrt strasse',
+    'du hast vorfahrt',
+  ],
   'z_tempo30': ['tempo dreissig', 'dreissiger zone', 'tempo limit dreissig'],
-  'z_ueberholverbot': ['ueberholverbot', 'nicht ueberholen', 'ueberholen verboten'],
+  'z_ueberholverbot': [
+    'ueberholverbot',
+    'nicht ueberholen',
+    'ueberholen verboten',
+  ],
   'z_einbahn': ['einbahnstrasse', 'einbahn'],
 
   // ===================== MODUS FAHRZEUG =====================
@@ -100,7 +147,11 @@ const Map<String, List<String>> kCommandPhrases = {
   'abblendlicht': ['abblendlicht'],
   'fernlicht': ['fernlicht', 'aufblendlicht'],
   'standlicht': ['standlicht', 'begrenzungslicht'],
-  'blinker_fz': ['blinker pruefen', 'blinker kontrollieren', 'fahrtrichtungsanzeiger'],
+  'blinker_fz': [
+    'blinker pruefen',
+    'blinker kontrollieren',
+    'fahrtrichtungsanzeiger',
+  ],
   'warnblinker': ['warnblinker', 'warnblinkanlage'],
   'bremslicht': ['bremslicht', 'bremsleuchte'],
   'ruecklicht': ['ruecklicht', 'schlusslicht'],
@@ -122,7 +173,11 @@ const Map<String, List<String>> kCommandPhrases = {
 
   // --- Assistenzsysteme ---
   'abs': ['a b s', 'anti blockier system', 'antiblockiersystem'],
-  'esp': ['e s p', 'elektronisches stabilitaetsprogramm', 'stabilitaetsprogramm'],
+  'esp': [
+    'e s p',
+    'elektronisches stabilitaetsprogramm',
+    'stabilitaetsprogramm',
+  ],
   'spurhalte': ['spurhalteassistent', 'spurassistent'],
   'notbrems': ['notbremsassistent', 'notbremssystem'],
   'acc': ['abstandstempomat', 'adaptiver tempomat', 'abstandsregeltempomat'],
@@ -197,10 +252,20 @@ const Set<String> kOrdinalAnchors = {
 
 /// Ordnungszahlwörter → Zahl. `naechste` zählt als „die erste kommende".
 const Map<String, int> kOrdinalWords = {
-  'erste': 1, 'ersten': 1, 'erster': 1, 'naechste': 1, 'naechsten': 1,
-  'zweite': 2, 'zweiten': 2, 'zweiter': 2,
-  'dritte': 3, 'dritten': 3, 'dritter': 3,
-  'vierte': 4, 'vierten': 4, 'vierter': 4,
+  'erste': 1,
+  'ersten': 1,
+  'erster': 1,
+  'naechste': 1,
+  'naechsten': 1,
+  'zweite': 2,
+  'zweiten': 2,
+  'zweiter': 2,
+  'dritte': 3,
+  'dritten': 3,
+  'dritter': 3,
+  'vierte': 4,
+  'vierten': 4,
+  'vierter': 4,
 };
 
 /// Wörter, die die Dringlichkeit um eine Stufe anheben und dabei verbraucht
@@ -219,6 +284,9 @@ const Set<String> kUrgencyBoosters = {
 const Set<String> kFillerWords = {
   'so', 'jetzt', 'mal', 'bitte', 'dann', 'und', 'aehm', 'aeh', 'okay', 'ok',
   'du', 'ja', 'also', 'hier', 'da', 'wir', 'ich', 'nun', 'eben', 'halt',
+  // Reihungswörter – „links und danach rechts" ist der Standardweg für
+  // Kombinationen, seit es den Kombi-Modus der Kacheln nicht mehr gibt.
+  'danach', 'anschliessend', 'gleich',
 };
 
 /// Verneinungen – blockieren positives Feedback („das war **nicht** gut").

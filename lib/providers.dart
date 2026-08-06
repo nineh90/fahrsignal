@@ -41,30 +41,6 @@ final transportProvider = Provider<SignalTransport>((ref) {
   return t;
 });
 
-/// Wie der Fahrlehrer Kommandos auslöst.
-enum SenderInputMode {
-  /// Kachelraster (bisheriger und weiterhin voreingestellter Weg).
-  buttons,
-
-  /// Push-to-talk: Knopf halten, sprechen, loslassen.
-  ptt,
-}
-
-class SenderInputModeNotifier extends Notifier<SenderInputMode> {
-  @override
-  SenderInputMode build() => SenderInputMode.buttons;
-
-  void set(SenderInputMode m) => state = m;
-}
-
-/// Eingabeweg des Senders. Bewusst als Provider und nicht als lokaler State:
-/// `SenderGrid` wird per `Navigator.push` ohne Konstruktorparameter erzeugt,
-/// und für Tests/Vorführung muss der Modus von außen setzbar sein.
-final senderInputModeProvider =
-    NotifierProvider<SenderInputModeNotifier, SenderInputMode>(
-      SenderInputModeNotifier.new,
-    );
-
 /// Mikrofonfreigabe: `null` = noch nicht gefragt, `true` = erteilt,
 /// `false` = abgelehnt. Wird geteilt, damit der Umschalter danach fragen kann
 /// und das Bedienteil weiß, ob es einen Hinweis zeigen muss.
@@ -75,8 +51,9 @@ class MicPermissionNotifier extends Notifier<bool?> {
   void set(bool? granted) => state = granted;
 }
 
-final micPermissionProvider =
-    NotifierProvider<MicPermissionNotifier, bool?>(MicPermissionNotifier.new);
+final micPermissionProvider = NotifierProvider<MicPermissionNotifier, bool?>(
+  MicPermissionNotifier.new,
+);
 
 /// Skript für den Fake-Erkenner: erlaubt die Vorführung ohne Mikrofon und
 /// ist zugleich der Dev-Loop am Linux-Desktop.

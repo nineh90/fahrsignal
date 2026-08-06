@@ -22,7 +22,8 @@ class StubSpeechRecognizer implements SpeechRecognizer {
   Stream<SpeechStatus> get status => _status.stream;
 
   @override
-  String get lastError => 'Spracherkennung auf dieser Plattform nicht verfügbar';
+  String get lastError =>
+      'Spracherkennung auf dieser Plattform nicht verfügbar';
 
   @override
   Future<bool> warmUp() async => false;

@@ -45,66 +45,89 @@ class _StartScreenState extends ConsumerState<StartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const FahrSignalLogo(size: 92),
-                const SizedBox(height: 14),
-                const FahrSignalWordmark(fontSize: 34),
-                const SizedBox(height: 10),
-                Text(
-                  kBrandTagline,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+        // Scrollbar, damit kleine Bildschirme (Handy quer, Split-Screen)
+        // nie abgeschnitten werden.
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const FahrSignalLogo(size: 92),
+                  const SizedBox(height: 14),
+                  const FahrSignalWordmark(fontSize: 34),
+                  const SizedBox(height: 10),
+                  Text(
+                    kBrandTagline,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Gleicher Raumcode auf beiden Geräten',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 32),
-                TextField(
-                  controller: _controller,
-                  textAlign: TextAlign.center,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 6,
-                  style: const TextStyle(fontSize: 28, letterSpacing: 4),
-                  inputFormatters: [
-                    UpperCaseTextFormatter(),
-                    FilteringTextInputFormatter.allow(RegExp('[A-Z0-9]')),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Raumcode',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 28),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Gleicher Raumcode auf beiden Geräten',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: _controller,
+                            textAlign: TextAlign.center,
+                            textCapitalization: TextCapitalization.characters,
+                            maxLength: 6,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              letterSpacing: 4,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            inputFormatters: [
+                              UpperCaseTextFormatter(),
+                              FilteringTextInputFormatter.allow(
+                                RegExp('[A-Z0-9]'),
+                              ),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Raumcode',
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          SizedBox(
+                            height: 60,
+                            child: FilledButton.icon(
+                              onPressed: () => _enter(Role.sender),
+                              icon: const Icon(Icons.record_voice_over),
+                              label: const Text('Senden (Fahrlehrer)'),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 60,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => _enter(Role.receiver),
+                              icon: const Icon(Icons.smartphone),
+                              label: const Text('Empfangen (Fahrschüler)'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 64,
-                  child: FilledButton.icon(
-                    onPressed: () => _enter(Role.sender),
-                    icon: const Icon(Icons.send),
-                    label: const Text('Senden (Fahrlehrer)'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 64,
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => _enter(Role.receiver),
-                    icon: const Icon(Icons.tv),
-                    label: const Text('Empfangen (Fahrschüler)'),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

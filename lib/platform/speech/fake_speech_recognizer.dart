@@ -55,9 +55,7 @@ class FakeSpeechRecognizer implements SpeechRecognizer {
     // die echte Erkennung auch.
     final words = utterance.split(' ');
     final half = words.take((words.length / 2).ceil()).join(' ');
-    _results.add(
-      SpeechResult(transcript: half, confidence: 0, isFinal: false),
-    );
+    _results.add(SpeechResult(transcript: half, confidence: 0, isFinal: false));
 
     _pending = Timer(delay, () {
       _results.add(

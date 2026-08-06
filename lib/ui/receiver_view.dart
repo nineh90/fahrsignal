@@ -253,11 +253,7 @@ class _CommandDisplay extends StatelessWidget {
               Positioned(
                 top: -6,
                 right: -10,
-                child: _OrdinalBadge(
-                  ord: c.ord,
-                  fg: fg,
-                  bg: commandColor(c),
-                ),
+                child: _OrdinalBadge(ord: c.ord, fg: fg, bg: commandColor(c)),
               ),
             ],
           )

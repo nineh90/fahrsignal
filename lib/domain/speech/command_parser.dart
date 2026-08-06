@@ -115,8 +115,14 @@ String normalizeUtterance(String input) {
   var s = input.toLowerCase();
 
   const umlauts = {
-    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss',
-    'á': 'a', 'à': 'a', 'é': 'e', 'è': 'e',
+    'ä': 'ae',
+    'ö': 'oe',
+    'ü': 'ue',
+    'ß': 'ss',
+    'á': 'a',
+    'à': 'a',
+    'é': 'e',
+    'è': 'e',
   };
   umlauts.forEach((from, to) => s = s.replaceAll(from, to));
 

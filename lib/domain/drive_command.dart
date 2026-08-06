@@ -62,13 +62,16 @@ class DriveCommand {
   );
 
   /// Kombination mehrerer Kommandos (Dringlichkeit = höchste der Teile).
-  factory DriveCommand.combo(List<String> keys, Urgency urgency, {int ord = 0}) =>
-      DriveCommand(
-        keys: List.unmodifiable(keys),
-        urgency: urgency,
-        ord: ord,
-        ts: DateTime.now().millisecondsSinceEpoch,
-      );
+  factory DriveCommand.combo(
+    List<String> keys,
+    Urgency urgency, {
+    int ord = 0,
+  }) => DriveCommand(
+    keys: List.unmodifiable(keys),
+    urgency: urgency,
+    ord: ord,
+    ts: DateTime.now().millisecondsSinceEpoch,
+  );
 
   /// Frei getippte Anweisung des Fahrlehrers.
   factory DriveCommand.freitext(
