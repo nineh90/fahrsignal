@@ -14,17 +14,22 @@ import 'traffic_signs.dart';
 ///
 /// Sprache ist kein eigener Modus mehr, sondern immer verfügbar: Knopf halten
 /// → sprechen → loslassen. Sicher Erkanntes geht **ohne Verzögerung** raus
-/// (im Auto zählt jede Zehntelsekunde), mit „Zurücknehmen" als Notausgang in
-/// der Bestätigung. Unsicheres wird zur Auswahl gestellt, Unverstandenes kann
-/// als Freitext raus. Mehrere Kommandos in einem Satz („links und dann
-/// rechts") gehen als Kombination raus – das ersetzt den früheren Kombi-Modus
-/// der Kacheln.
+/// (im Auto zählt jede Zehntelsekunde); die Bestätigung erscheint kurz im
+/// Halteknopf selbst, ein Fehlgriff wird über „Anzeige aus" korrigiert.
+/// Unsicheres wird zur Auswahl gestellt, Unverstandenes kann als Freitext
+/// raus. Mehrere Kommandos in einem Satz („links und dann rechts") gehen als
+/// Kombination raus – das ersetzt den früheren Kombi-Modus der Kacheln.
 class PttBar extends ConsumerStatefulWidget {
   /// Keys des aktuell gewählten Dashboard-Bereichs – Treffer außerhalb werden
   /// abgewertet, damit „Felgen" im Fahrtmodus nicht gegen „folgen" gewinnt.
   final Set<String> scopeKeys;
 
-  const PttBar({super.key, required this.scopeKeys});
+  /// Stand des Erklären/Abfragen-Umschalters. Gilt als Vorgabe für Kommandos
+  /// mit Erklärung; ein gesprochener Marker („frag … ab", „erkläre …")
+  /// übersteuert ihn.
+  final bool askDefault;
+
+  const PttBar({super.key, required this.scopeKeys, this.askDefault = false});
 
   @override
   ConsumerState<PttBar> createState() => _PttBarState();
@@ -45,6 +50,11 @@ class _PttBarState extends ConsumerState<PttBar> {
   String _lastSentSignature = '';
   DateTime _lastSentAt = DateTime.fromMillisecondsSinceEpoch(0);
 
+  /// Kurz angezeigte Sendebestätigung – erscheint **im** Halteknopf, damit
+  /// sie keine Kacheln verdeckt. Zurücknehmen läuft über „Anzeige aus".
+  DriveCommand? _confirmed;
+  Timer? _confirmTimer;
+
   @override
   void initState() {
     super.initState();
@@ -60,10 +70,18 @@ class _PttBarState extends ConsumerState<PttBar> {
   void dispose() {
     _resultSub?.cancel();
     _statusSub?.cancel();
+    _confirmTimer?.cancel();
     super.dispose();
   }
 
   Urgency _urgencyOf(String key) => commandByKey(key)?.urgency ?? Urgency.info;
+
+  /// Löst die Abfrage-Entscheidung auf: gesprochener Marker vor Umschalter,
+  /// und nur für Einzelkommandos, die überhaupt eine Erklärung haben.
+  bool _resolveAsk(ParsedIntent intent, String key) =>
+      !intent.isCombo &&
+      (commandByKey(key)?.hasExplanation ?? false) &&
+      (intent.ask ?? widget.askDefault);
 
   void _onResult(SpeechResult r) {
     if (!mounted) return;
@@ -82,7 +100,7 @@ class _PttBarState extends ConsumerState<PttBar> {
     );
 
     if (intent.canAutoSend) {
-      _send(intent.toCommand());
+      _send(intent.toCommand(asAsk: _resolveAsk(intent, intent.key!)));
       setState(() => _pending = null);
     } else {
       setState(() => _pending = intent);
@@ -103,22 +121,11 @@ class _PttBarState extends ConsumerState<PttBar> {
 
     ref.read(transportProvider).sendCommand(cmd);
 
-    // Bestätigung mit Notausgang – als Snackbar statt fester Karte, damit die
-    // Leiste kompakt bleibt und der Halteknopf nie verdeckt wird.
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Gesendet: ${displayLabel(cmd)}'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Zurücknehmen',
-            onPressed: () => ref
-                .read(transportProvider)
-                .sendCommand(DriveCommand.now(kOffKey, Urgency.info)),
-          ),
-        ),
-      );
+    _confirmTimer?.cancel();
+    setState(() => _confirmed = cmd);
+    _confirmTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) setState(() => _confirmed = null);
+    });
   }
 
   Future<void> _startHold() async {
@@ -182,6 +189,16 @@ class _PttBarState extends ConsumerState<PttBar> {
             padding: const EdgeInsets.only(bottom: 10),
             child: _Candidates(
               intent: _pending!,
+              primary: _pending!.outcome == ParseOutcome.matched
+                  ? _pending!.toCommand(
+                      asAsk: _resolveAsk(_pending!, _pending!.key!),
+                    )
+                  : null,
+              alternativeOf: (key) => DriveCommand.now(
+                key,
+                _urgencyOf(key),
+                ask: _resolveAsk(_pending!, key),
+              ),
               onPick: (cmd) {
                 _send(cmd);
                 setState(() => _pending = null);
@@ -189,9 +206,7 @@ class _PttBarState extends ConsumerState<PttBar> {
               onFreitext: () {
                 final text = _pending!.transcript.trim();
                 if (text.isNotEmpty) {
-                  ref
-                      .read(transportProvider)
-                      .sendCommand(DriveCommand.freitext(text));
+                  _send(DriveCommand.freitext(text));
                 }
                 setState(() => _pending = null);
               },
@@ -217,6 +232,7 @@ class _PttBarState extends ConsumerState<PttBar> {
         _HoldButton(
           active: active,
           enabled: supported,
+          confirmedLabel: _confirmed == null ? null : displayLabel(_confirmed!),
           onStart: _startHold,
           onEnd: _endHold,
         ),
@@ -230,12 +246,17 @@ class _PttBarState extends ConsumerState<PttBar> {
 class _HoldButton extends StatelessWidget {
   final bool active;
   final bool enabled;
+
+  /// Label des gerade Gesendeten – wird für ~2,5 s im Knopf bestätigt.
+  final String? confirmedLabel;
+
   final Future<void> Function() onStart;
   final Future<void> Function() onEnd;
 
   const _HoldButton({
     required this.active,
     required this.enabled,
+    required this.confirmedLabel,
     required this.onStart,
     required this.onEnd,
   });
@@ -243,16 +264,21 @@ class _HoldButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Bestätigung nur zeigen, wenn nicht gerade gesprochen wird –
+    // beim erneuten Halten hat das Zuhören Vorrang.
+    final confirming = !active && confirmedLabel != null;
     final background = !enabled
         ? scheme.surfaceContainerHighest
         : active
         ? scheme.error
+        : confirming
+        ? const Color(0xFF2E7D32)
         : scheme.primary;
     final foreground = !enabled
         ? scheme.onSurfaceVariant
         : active
         ? scheme.onError
-        : scheme.onPrimary;
+        : Colors.white;
 
     return Semantics(
       button: true,
@@ -281,18 +307,30 @@ class _HoldButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                active ? Icons.mic : Icons.mic_none,
+                confirming
+                    ? Icons.check_circle
+                    : active
+                    ? Icons.mic
+                    : Icons.mic_none,
                 size: 30,
                 color: foreground,
               ),
               const SizedBox(width: 10),
-              Text(
-                active ? 'Ich höre …' : 'Halten & sprechen',
-                style: TextStyle(
-                  color: foreground,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .2,
+              Flexible(
+                child: Text(
+                  confirming
+                      ? 'Gesendet: ${confirmedLabel!.toUpperCase()}'
+                      : active
+                      ? 'Ich höre …'
+                      : 'Halten & sprechen',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .2,
+                  ),
                 ),
               ),
             ],
@@ -306,12 +344,22 @@ class _HoldButton extends StatelessWidget {
 /// Unsicher erkannt: zur Auswahl stellen statt raten.
 class _Candidates extends StatelessWidget {
   final ParsedIntent intent;
+
+  /// Sendefertiges Primärkommando; null bei „nicht erkannt".
+  final DriveCommand? primary;
+
+  /// Baut das sendefertige Kommando zu einem Alternativ-Key (inkl. Abfrage-
+  /// Entscheidung – die kennt nur der Aufrufer).
+  final DriveCommand Function(String key) alternativeOf;
+
   final void Function(DriveCommand) onPick;
   final VoidCallback onFreitext;
   final VoidCallback onDiscard;
 
   const _Candidates({
     required this.intent,
+    required this.primary,
+    required this.alternativeOf,
     required this.onPick,
     required this.onFreitext,
     required this.onDiscard,
@@ -339,26 +387,15 @@ class _Candidates extends StatelessWidget {
             Text('„${intent.transcript}"', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
 
-            if (!unmatched)
-              _CandidateTile(
-                cmd: intent.toCommand(),
-                onTap: () => onPick(intent.toCommand()),
-              ),
+            if (!unmatched && primary != null)
+              _CandidateTile(cmd: primary!, onTap: () => onPick(primary!)),
 
             for (final key in intent.alternatives)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: _CandidateTile(
-                  cmd: DriveCommand.now(
-                    key,
-                    commandByKey(key)?.urgency ?? Urgency.info,
-                  ),
-                  onTap: () => onPick(
-                    DriveCommand.now(
-                      key,
-                      commandByKey(key)?.urgency ?? Urgency.info,
-                    ),
-                  ),
+                  cmd: alternativeOf(key),
+                  onTap: () => onPick(alternativeOf(key)),
                 ),
               ),
 

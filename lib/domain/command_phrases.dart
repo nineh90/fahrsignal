@@ -287,6 +287,33 @@ const Set<String> kFillerWords = {
   // Reihungswörter – „links und danach rechts" ist der Standardweg für
   // Kombinationen, seit es den Kombi-Modus der Kacheln nicht mehr gibt.
   'danach', 'anschliessend', 'gleich',
+  // Artikel/Pronomen – „frag mal den Verbandskasten ab", „erklaere mir das
+  // Abblendlicht" sollen volle Abdeckung erreichen. „ab" ist das abgetrennte
+  // Präfix von „abfragen" (innerhalb von Phrasen wie „bieg links ab" wird es
+  // vorher vom Phrasentreffer konsumiert).
+  'der', 'die', 'das', 'den', 'dem', 'ein', 'eine', 'einen', 'mir', 'mich',
+  'ab',
+};
+
+/// Wörter, die ein Kommando als **Abfrage** markieren („frag den
+/// Verbandskasten ab", „zeig mir die Handbremse") – setzt `ask` auf true.
+const Set<String> kAskMarkers = {
+  'abfragen',
+  'abfrage',
+  'frag',
+  'frage',
+  'fragen',
+  'zeig',
+  'zeige',
+};
+
+/// Wörter, die ausdrücklich eine **Erklärung** verlangen („erkläre das
+/// Abblendlicht") – setzt `ask` auf false, egal was der Umschalter sagt.
+const Set<String> kExplainMarkers = {
+  'erklaeren',
+  'erklaere',
+  'erklaer',
+  'erklaerung',
 };
 
 /// Verneinungen – blockieren positives Feedback („das war **nicht** gut").

@@ -50,6 +50,10 @@ class ParsedIntent {
   /// Dringlichkeit nach Anwendung etwaiger Verstärker.
   final Urgency urgency;
 
+  /// Gesprochener Abfrage-/Erklär-Marker: true = „frag … ab", false =
+  /// „erkläre …", null = nichts gesagt (dann entscheidet der Umschalter).
+  final bool? ask;
+
   final double confidence;
 
   /// Ursprünglicher Text – Rückfallebene für Freitext.
@@ -69,6 +73,7 @@ class ParsedIntent {
     this.extraKeys = const [],
     this.ordinal = 0,
     this.urgency = Urgency.info,
+    this.ask,
     this.confidence = 0,
     this.alternatives = const [],
   });
@@ -92,14 +97,17 @@ class ParsedIntent {
   }
 
   /// Baut die sendefertige Anweisung. Nur bei [ParseOutcome.matched] sinnvoll.
-  DriveCommand toCommand() => isCombo
+  /// [asAsk] ist die aufgelöste Abfrage-Entscheidung (gesprochener Marker
+  /// bzw. Umschalter) – der Aufrufer prüft vorher, ob das Kommando überhaupt
+  /// eine Erklärung hat.
+  DriveCommand toCommand({bool asAsk = false}) => isCombo
       ? DriveCommand.combo(allKeys, urgency, ord: ordinal)
-      : DriveCommand.now(key!, urgency, ord: ordinal);
+      : DriveCommand.now(key!, urgency, ord: ordinal, ask: asAsk);
 
   @override
   String toString() =>
       'ParsedIntent(${outcome.name}, keys=$allKeys, ord=$ordinal, '
-      '${urgency.name}, conf=${confidence.toStringAsFixed(2)})';
+      '${urgency.name}, ask=$ask, conf=${confidence.toStringAsFixed(2)})';
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +244,7 @@ ParsedIntent parseUtterance(
   // Rückfrage landen statt sofort rauszugehen.
   final hasNegation = tokens.any(kNegationWords.contains);
   var boosted = false;
+  bool? ask;
 
   for (var k = 0; k < tokens.length; k++) {
     if (consumed[k]) continue;
@@ -244,6 +253,14 @@ ParsedIntent parseUtterance(
       boosted = true;
       consumed[k] = true;
     } else if (kNegationWords.contains(t)) {
+      consumed[k] = true;
+    } else if (kAskMarkers.contains(t)) {
+      // „frag … ab" / „zeig mir …" → als Abfrage senden.
+      ask = true;
+      consumed[k] = true;
+    } else if (kExplainMarkers.contains(t)) {
+      // „erkläre …" schlägt den Umschalter in Richtung Erklärung.
+      ask = false;
       consumed[k] = true;
     }
   }
@@ -368,6 +385,7 @@ ParsedIntent parseUtterance(
     extraKeys: keys.skip(1).toList(),
     ordinal: attributeOrdinal,
     urgency: urgency,
+    ask: ask,
     confidence: confidence,
     transcript: transcript,
     normalized: normalized,

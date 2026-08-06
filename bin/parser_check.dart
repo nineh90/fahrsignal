@@ -13,17 +13,16 @@ void expectIntent(
   List<String>? extra,
   int ord = 0,
   Urgency? urgency,
+  bool? ask,
+  bool checkAsk = false,
   ParseOutcome outcome = ParseOutcome.matched,
   Set<String>? scope,
 }) {
   checks++;
-  final r = parseUtterance(
-    utterance,
-    scopeKeys: scope,
-    urgencyOf: _urgencyOf,
-  );
+  final r = parseUtterance(utterance, scopeKeys: scope, urgencyOf: _urgencyOf);
   final problems = <String>[];
-  if (r.outcome != outcome) problems.add('outcome ${r.outcome.name} != ${outcome.name}');
+  if (r.outcome != outcome)
+    problems.add('outcome ${r.outcome.name} != ${outcome.name}');
   if (key != null && r.key != key) problems.add('key ${r.key} != $key');
   if (extra != null && r.extraKeys.join(',') != extra.join(',')) {
     problems.add('extra ${r.extraKeys} != $extra');
@@ -32,10 +31,15 @@ void expectIntent(
   if (urgency != null && r.urgency != urgency) {
     problems.add('urgency ${r.urgency.name} != ${urgency.name}');
   }
+  if (checkAsk && r.ask != ask) {
+    problems.add('ask ${r.ask} != $ask');
+  }
   if (problems.isEmpty) {
-    print('  ok   "$utterance" → ${r.key}${r.ordinal > 0 ? " ord=${r.ordinal}" : ""}'
-        ' ${r.urgency.name} conf=${r.confidence.toStringAsFixed(2)}'
-        '${r.canAutoSend ? " [auto]" : " [rueckfrage]"}');
+    print(
+      '  ok   "$utterance" → ${r.key}${r.ordinal > 0 ? " ord=${r.ordinal}" : ""}'
+      ' ${r.urgency.name} conf=${r.confidence.toStringAsFixed(2)}'
+      '${r.canAutoSend ? " [auto]" : " [rueckfrage]"}',
+    );
   } else {
     failures++;
     print('  FAIL "$utterance" → ${problems.join(' | ')}   ($r)');
@@ -78,24 +82,62 @@ void main() {
   print('\n=== "Achtung"-Sonderregel ===');
   expectIntent('achtung', key: 'achtung', urgency: Urgency.dringend);
   // Als Verstaerker: Kommando bleibt fussgaenger, Urgency steigt achtung→dringend
-  expectIntent('achtung fussgaenger', key: 'fussgaenger', urgency: Urgency.dringend);
+  expectIntent(
+    'achtung fussgaenger',
+    key: 'fussgaenger',
+    urgency: Urgency.dringend,
+  );
   expectIntent('vorsicht kinder', key: 'kinder', urgency: Urgency.dringend);
 
   print('\n=== Dringlichkeitsverstaerker ===');
   expectIntent('sofort bremsen', key: 'bremsen', urgency: Urgency.dringend);
-  expectIntent('schnell langsamer', key: 'langsamer', urgency: Urgency.dringend);
+  expectIntent(
+    'schnell langsamer',
+    key: 'langsamer',
+    urgency: Urgency.dringend,
+  );
 
   print('\n=== Verneinung darf kein Lob senden ===');
   expectIntent('gut gemacht', key: 'lob');
   expectIntent('das war nicht gut', key: 'fehler');
 
   print('\n=== Kombination ===');
-  expectIntent('spiegel und schulterblick', key: 'spiegel', extra: ['schulterblick']);
+  expectIntent(
+    'spiegel und schulterblick',
+    key: 'spiegel',
+    extra: ['schulterblick'],
+  );
+  expectIntent('links und danach rechts', key: 'links', extra: ['rechts']);
+
+  print('\n=== Abfrage-/Erklaer-Marker (Fahrzeug-Bereich) ===');
+  expectIntent(
+    'frag den verbandskasten ab',
+    key: 'verbandskasten',
+    ask: true,
+    checkAsk: true,
+  );
+  expectIntent(
+    'zeig mir die handbremse',
+    key: 'handbremse',
+    ask: true,
+    checkAsk: true,
+  );
+  expectIntent(
+    'erklaere das abblendlicht',
+    key: 'abblendlicht',
+    ask: false,
+    checkAsk: true,
+  );
+  // Ohne Marker bleibt ask offen — dann entscheidet der Umschalter im Sender.
+  expectIntent('verbandskasten', key: 'verbandskasten', checkAsk: true);
 
   print('\n=== Fuellwoerter duerfen nichts ausloesen ===');
   expectIntent('das ist halt so', outcome: ParseOutcome.unmatched);
   expectIntent('ja also dann mal', outcome: ParseOutcome.unmatched);
-  expectIntent('wir fahren gleich zum baecker', outcome: ParseOutcome.unmatched);
+  expectIntent(
+    'wir fahren gleich zum baecker',
+    outcome: ParseOutcome.unmatched,
+  );
   expectIntent('', outcome: ParseOutcome.unmatched);
 
   print('\n=== Ordinal ohne Anker ist kein Ordinal ===');
@@ -108,7 +150,8 @@ void main() {
   for (final e in kCommandPhrases.entries) {
     for (final p in e.value) {
       final prev = seen[p];
-      if (prev != null && prev != e.key) collisions.add('"$p": $prev vs ${e.key}');
+      if (prev != null && prev != e.key)
+        collisions.add('"$p": $prev vs ${e.key}');
       seen[p] = e.key;
     }
   }
@@ -123,7 +166,8 @@ void main() {
   final unstable = <String>[];
   for (final e in kCommandPhrases.entries) {
     for (final p in e.value) {
-      if (normalizeUtterance(p) != p) unstable.add('${e.key}: "$p" → "${normalizeUtterance(p)}"');
+      if (normalizeUtterance(p) != p)
+        unstable.add('${e.key}: "$p" → "${normalizeUtterance(p)}"');
     }
   }
   if (unstable.isEmpty) {
@@ -138,7 +182,10 @@ void main() {
   final cmd = DriveCommand.now('abbiegen_links', Urgency.info, ord: 2);
   final back = DriveCommand.fromJson(cmd.toJson());
   final v3 = DriveCommand.fromJson({
-    'v': 3, 'keys': ['links'], 'urgency': 'info', 'ts': 1,
+    'v': 3,
+    'keys': ['links'],
+    'urgency': 'info',
+    'ts': 1,
   });
   if (back.ord == 2 && v3.ord == 0) {
     print('  ok   ord=2 ueberlebt, v3-Nachricht ohne ord liest als 0');
@@ -147,5 +194,7 @@ void main() {
     print('  FAIL ord-Roundtrip: ${back.ord} / ${v3.ord}');
   }
 
-  print('\n${failures == 0 ? "ALLES GRUEN" : "$failures FEHLER"} — $checks Pruefungen\n');
+  print(
+    '\n${failures == 0 ? "ALLES GRUEN" : "$failures FEHLER"} — $checks Pruefungen\n',
+  );
 }

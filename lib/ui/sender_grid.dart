@@ -23,11 +23,16 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   DashboardMode _mode = DashboardMode.fahrt;
   bool _ask = false; // Fahrzeug: Erklären (false) vs. Abfragen (true)
 
-  /// Keys des aktuell gewählten Bereichs – grenzt die Spracherkennung ein,
-  /// damit „Felgen" im Fahrtmodus nicht gegen „Straße folgen" gewinnt.
+  /// Scope für die Spracherkennung. Alles Fahrbetriebsrelevante (Fahrt,
+  /// Zeichen, Fahrschüler) ist **immer** im Scope – das Auto fährt weiter,
+  /// egal welcher Bereich offen ist; „links" darf nie in der Rückfrage landen.
+  /// Nur die Fahrzeug-Themen bleiben auf ihren Bereich begrenzt, damit
+  /// „Felgen" im Fahrtmodus nicht gegen „Straße folgen" gewinnt.
   Set<String> get _scopeKeys => {
-    for (final cat in categoriesInMode(_mode))
-      for (final d in commandsInCategory(cat)) d.key,
+    for (final m in DashboardMode.values)
+      if (m != DashboardMode.fahrzeug || _mode == DashboardMode.fahrzeug)
+        for (final cat in categoriesInMode(m))
+          for (final d in commandsInCategory(cat)) d.key,
   };
 
   void _tap(CommandDef d) {
@@ -195,6 +200,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
       ),
       bottomNavigationBar: _SenderBottomBar(
         scopeKeys: _scopeKeys,
+        askDefault: _ask,
         onFreitext: _composeFreitext,
         onOff: () => ref
             .read(transportProvider)
@@ -373,10 +379,12 @@ class _CommandTile extends StatelessWidget {
 /// Halteknopf dominiert.
 class _SenderBottomBar extends StatelessWidget {
   final Set<String> scopeKeys;
+  final bool askDefault;
   final VoidCallback onFreitext;
   final VoidCallback onOff;
   const _SenderBottomBar({
     required this.scopeKeys,
+    required this.askDefault,
     required this.onFreitext,
     required this.onOff,
   });
@@ -391,7 +399,7 @@ class _SenderBottomBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PttBar(scopeKeys: scopeKeys),
+            PttBar(scopeKeys: scopeKeys, askDefault: askDefault),
             const SizedBox(height: 8),
             Row(
               children: [
