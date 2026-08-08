@@ -349,6 +349,10 @@ class _CommandTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () => onTap(def),
         child: Stack(
+          // Ohne das richtet der Stack sein Kind oben links aus – und da die
+          // Column nur so breit ist wie ihr längstes Wort, klebten kurze
+          // Beschriftungen („Links") samt Symbol am linken Kachelrand.
+          alignment: Alignment.center,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),

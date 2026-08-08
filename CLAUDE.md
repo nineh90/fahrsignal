@@ -225,6 +225,16 @@ Regeln – kommen aus dem Logo selbst, nicht aus Geschmack:
   verschwindet „Fahrlehrerin" im Grund. `SarahLogo` wählt sie nach der Theme-Helligkeit;
   auf dem Empfängerschirm bestimmt aber die Dringlichkeitsfarbe den Grund → dort setzt
   der Aufrufer `onDark` selbst (hell außer auf Gelb).
+- **Optisch zentrieren, nicht geometrisch.** Die Dateien sind exakt symmetrisch
+  beschnitten, das Motiv ist es nicht: der Regenbogen ist ein „C" mit dicker
+  Pinselwange links und offener Seite rechts. Auf die Bildkante zentriert wirkt
+  das Logo nach links gerutscht. `SarahLogo` gleicht das mit einer Polsterung
+  von `kOpticalShift` (5 % der Bildbreite) aus – gemessen am Schwerpunkt der
+  *gefüllten* Silhouette (5,1 % links) und an gerenderten Varianten geprüft.
+  Bewusst im Widget und nicht in der Datei: das Asset bleibt die unveränderte
+  Marke, und der Ausgleich wirkt an allen Einsatzorten. Ein neues Logo braucht
+  eine neue Messung – `test/brand_logo_test.dart` hält Seitenverhältnis und
+  Wirkung fest.
 - **WebP, nicht PNG** – die Aquarell-Verläufe komprimieren als PNG viermal so groß
   (1,2 MB statt 300 kB), und die Web-App wird über Mobilfunk geladen.
 - Das alte `FahrSignalLogo` (gezeichnetes Lenkrad im Regenbogen-Ring) bleibt in

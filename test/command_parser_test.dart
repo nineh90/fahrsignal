@@ -43,6 +43,40 @@ void main() {
     });
   });
 
+  group('Sprechweisen, die im Feldtest durchfielen', () {
+    test('zusammengeschriebene Komposita treffen genauso', () {
+      // Die Spracherkennung macht aus dem gesprochenen „links abbiegen" gern
+      // ein Wort. Beide Formen müssen gehen – sonst funktioniert nur das
+      // sperrige „abbiegen links".
+      for (final pair in {
+        'linksabbiegen': 'abbiegen_links',
+        'links abbiegen': 'abbiegen_links',
+        'abbiegen links': 'abbiegen_links',
+        'rechtsabbiegen': 'abbiegen_rechts',
+        'rechts abbiegen': 'abbiegen_rechts',
+        'abbiegen rechts': 'abbiegen_rechts',
+      }.entries) {
+        final r = parseUtterance(pair.key);
+        expect(r.key, pair.value, reason: pair.key);
+        expect(r.canAutoSend, isTrue, reason: pair.key);
+      }
+    });
+
+    test('Einordnen trägt die Richtung mit', () {
+      for (final pair in {
+        'links einordnen': 'einordnen_links',
+        'rechts einordnen': 'einordnen_rechts',
+        'ordne dich links ein': 'einordnen_links',
+        'auf die rechte spur': 'einordnen_rechts',
+        // ohne Richtung bleibt es das neutrale Kommando
+        'einordnen': 'einordnen',
+        'spur wechseln': 'einordnen',
+      }.entries) {
+        expect(parseUtterance(pair.key).key, pair.value, reason: pair.key);
+      }
+    });
+  });
+
   group('Ganze Sätze', () {
     test('Kommando im Fließtext wird sicher erkannt', () {
       for (final pair in {

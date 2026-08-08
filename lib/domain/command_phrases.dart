@@ -48,9 +48,15 @@ const Map<String, List<String>> kCommandPhrases = {
     'weiter geradeaus',
     'einfach geradeaus',
     'immer geradeaus',
+    'geradeausfahren',
   ],
+  // „linksabbiegen" in einem Wort ist kein Tippfehler, sondern das, was die
+  // Spracherkennung aus dem gesprochenen Kompositum macht – und im Deutschen
+  // korrekt. Ohne diese Form ging ausgerechnet die natürlichste Sprechweise
+  // ins Leere, während das sperrige „abbiegen links" funktionierte.
   'abbiegen_links': [
     'links abbiegen',
+    'linksabbiegen',
     'abbiegen links',
     'nach links abbiegen',
     'biege links ab',
@@ -59,6 +65,7 @@ const Map<String, List<String>> kCommandPhrases = {
   ],
   'abbiegen_rechts': [
     'rechts abbiegen',
+    'rechtsabbiegen',
     'abbiegen rechts',
     'nach rechts abbiegen',
     'biege rechts ab',
@@ -66,13 +73,26 @@ const Map<String, List<String>> kCommandPhrases = {
     'rechts rein',
   ],
   'wenden': ['wenden', 'umdrehen', 'wende', 'kehrt machen'],
-  'einordnen': [
-    'einordnen',
-    'ordne dich ein',
-    'spur wechseln',
-    'einfaedeln',
+  'einordnen': ['einordnen', 'ordne dich ein', 'spur wechseln', 'einfaedeln'],
+  'einordnen_links': [
     'links einordnen',
+    'linkseinordnen',
+    'einordnen links',
+    'ordne dich links ein',
+    'links einfaedeln',
+    'auf die linke spur',
+    'linke spur',
+    'nach links einordnen',
+  ],
+  'einordnen_rechts': [
     'rechts einordnen',
+    'rechtseinordnen',
+    'einordnen rechts',
+    'ordne dich rechts ein',
+    'rechts einfaedeln',
+    'auf die rechte spur',
+    'rechte spur',
+    'nach rechts einordnen',
   ],
   'kreisverkehr': [
     'kreisverkehr',
@@ -97,7 +117,12 @@ const Map<String, List<String>> kCommandPhrases = {
     'folge der strasse',
     'weiter folgen',
   ],
-  'rueckwaerts': ['rueckwaerts', 'zurueck setzen', 'rueckwaerts fahren'],
+  'rueckwaerts': [
+    'rueckwaerts',
+    'zurueck setzen',
+    'rueckwaerts fahren',
+    'rueckwaertsfahren',
+  ],
 
   // --- Tempo ---
   'langsamer': [
@@ -116,6 +141,7 @@ const Map<String, List<String>> kCommandPhrases = {
     'zuegiger',
     'etwas schneller',
     'gas geben',
+    'gasgeben',
   ],
   'bremsen': ['bremsen', 'brems', 'bremse jetzt', 'abbremsen'],
   'parken': ['parken', 'parkluecke', 'halten', 'hier halten'],
@@ -268,7 +294,6 @@ const Map<String, List<String>> kCommandPhrases = {
   'kuehlwasser': ['kuehlwasser', 'kuehlfluessigkeit'],
   'bremsfluessigkeit': ['bremsfluessigkeit'],
   'wischwasser': ['scheibenwaschwasser', 'wischwasser', 'waschwasser'],
-  'servooel': ['servooel', 'servofluessigkeit', 'lenkhilfefluessigkeit'],
 
   // --- Assistenzsysteme ---
   'abs': ['a b s', 'anti blockier system', 'antiblockiersystem'],

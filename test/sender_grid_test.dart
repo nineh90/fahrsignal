@@ -50,6 +50,36 @@ void main() {
     expect(tops, hasLength(1));
   });
 
+  testWidgets('Symbol und Beschriftung sitzen mittig in der Kachel', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: SenderGrid())),
+    );
+    await tester.pumpAndSettle();
+
+    // „Links" ist der kritische Fall: kurzes Wort, schmale Column. Genau da
+    // klebte der Inhalt am linken Kachelrand, solange der Stack ihn oben
+    // links ausrichtete.
+    final tile = tester.getRect(
+      find
+          .ancestor(of: find.text('Links'), matching: find.byType(InkWell))
+          .first,
+    );
+    expect(
+      tester.getRect(find.text('Links')).center.dx,
+      closeTo(tile.center.dx, 0.5),
+    );
+    expect(
+      tester.getRect(find.byIcon(Icons.turn_left).first).center.dx,
+      closeTo(tile.center.dx, 0.5),
+    );
+  });
+
   testWidgets('Kachel zeigt Kurzlabel, Katalog trägt den vollen Text', (
     tester,
   ) async {

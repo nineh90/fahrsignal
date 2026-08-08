@@ -235,12 +235,32 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
   ),
+  // Einordnen mit Richtung: „links einordnen" trug die Seite bisher nicht
+  // mit – der Schüler las nur „EINORDNEN" und wusste nicht, wohin. Die drei
+  // stehen als Gruppe in einer Zeile, die richtungslose Form in der Mitte.
+  CommandDef(
+    'einordnen_links',
+    'Links einordnen',
+    Icons.turn_slight_left,
+    Urgency.info,
+    CommandCategory.richtung,
+    group: 'einordnen',
+  ),
   CommandDef(
     'einordnen',
     'Einordnen',
     Icons.merge,
     Urgency.info,
     CommandCategory.richtung,
+    group: 'einordnen',
+  ),
+  CommandDef(
+    'einordnen_rechts',
+    'Rechts einordnen',
+    Icons.turn_slight_right,
+    Urgency.info,
+    CommandCategory.richtung,
+    group: 'einordnen',
   ),
   CommandDef(
     'kreisverkehr',
@@ -750,15 +770,6 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.fluessigkeit,
     explanation:
         'Behälter auffüllen; im Winter mit Frostschutz, damit die Sicht klar bleibt.',
-  ),
-  CommandDef(
-    'servooel',
-    'Servoöl',
-    Icons.oil_barrel,
-    Urgency.info,
-    CommandCategory.fluessigkeit,
-    explanation:
-        'Falls vorhanden: Stand prüfen – wichtig für eine leichtgängige Lenkung.',
   ),
 
   // --- Assistenzsysteme ---

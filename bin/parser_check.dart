@@ -157,6 +157,24 @@ void main() {
   // Zu kurz zum Raten – bleibt Vorschlag statt Treffer.
   expectIntent('hup', outcome: ParseOutcome.unmatched, mustSuggest: 'hupe');
 
+  print('\n=== Zusammengeschriebene Komposita (so liefert es die ASR) ===');
+  expectIntent('linksabbiegen', key: 'abbiegen_links');
+  expectIntent('rechtsabbiegen', key: 'abbiegen_rechts');
+  expectIntent('du musst hier rechtsabbiegen', key: 'abbiegen_rechts');
+  expectIntent('rueckwaertsfahren', key: 'rueckwaerts');
+  expectIntent('geradeausfahren', key: 'geradeaus');
+
+  print('\n=== Einordnen traegt die Richtung mit ===');
+  expectIntent('links einordnen', key: 'einordnen_links');
+  expectIntent('rechts einordnen', key: 'einordnen_rechts');
+  expectIntent('linkseinordnen', key: 'einordnen_links');
+  expectIntent('ordne dich rechts ein', key: 'einordnen_rechts');
+  expectIntent('links einfaedeln', key: 'einordnen_links');
+  expectIntent('auf die linke spur', key: 'einordnen_links');
+  // Ohne Richtung bleibt es das neutrale Kommando.
+  expectIntent('einordnen', key: 'einordnen');
+  expectIntent('spur wechseln', key: 'einordnen');
+
   print('\n=== Ganze Saetze, wie sie im Auto fallen ===');
   expectIntent(
     'so, dann faehrst du jetzt bitte mal rechts ran',

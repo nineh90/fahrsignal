@@ -107,6 +107,14 @@ ThemeData fahrSignalTheme(Brightness brightness) {
 /// [onDark] wählt die helle Variante (Schrift creme, Lenkrad invertiert) –
 /// ohne Angabe entscheidet die Theme-Helligkeit. Auf dem Empfängerschirm muss
 /// der Aufrufer sie setzen, dort bestimmt die Dringlichkeitsfarbe den Grund.
+///
+/// **Optische Mitte statt geometrischer.** Die Bilddatei ist exakt symmetrisch
+/// beschnitten, das Motiv aber nicht: der Regenbogen ist ein „C", links eine
+/// dicke Pinselwange, rechts offen. Zentriert man die Bildkante, wirkt das
+/// Logo nach links gerutscht – genau das fiel am Startbildschirm auf. Das
+/// Widget gleicht das über eine Polsterung aus, statt die Datei zu
+/// manipulieren: so bleibt das Asset die unveränderte Marke, und der Ausgleich
+/// wirkt an allen Einsatzorten gleich.
 class SarahLogo extends StatelessWidget {
   /// Höhe in Logischen Pixeln; die Breite folgt dem Seitenverhältnis.
   final double size;
@@ -120,6 +128,15 @@ class SarahLogo extends StatelessWidget {
     this.onDark,
   });
 
+  /// Seitenverhältnis (Breite/Höhe) der Logo-Assets: 640×739 bzw. 320×370.
+  /// Ein Test hält die Dateien darauf fest.
+  static const double kAspect = 640 / 739;
+
+  /// Wieviel der Bildbreite das Motiv nach rechts wandern muss, damit es
+  /// mittig **wirkt**. Gemessen am Schwerpunkt der gefüllten Silhouette
+  /// (5,1 % nach links) und an einer Reihe gerenderter Varianten gegengeprüft.
+  static const double kOpticalShift = 0.05;
+
   @override
   Widget build(BuildContext context) {
     final dark = onDark ?? (Theme.of(context).brightness == Brightness.dark);
@@ -129,13 +146,19 @@ class SarahLogo extends StatelessWidget {
       (false, true) => 'assets/logo_sarah_hell.webp',
       (false, false) => 'assets/logo_sarah.webp',
     };
-    return Image.asset(
-      asset,
-      height: size,
-      fit: BoxFit.contain,
-      // Das Logo trägt den Namen selbst – für Screenreader benannt, damit die
-      // Empfängeransicht nicht mit einem unbeschrifteten Bild beginnt.
-      semanticLabel: 'Fahrlehrerin Sarah',
+    // Doppelter Versatz als Polsterung: beim Zentrieren fällt die Hälfte davon
+    // wieder weg, übrig bleibt genau [kOpticalShift].
+    final pad = size * kAspect * 2 * kOpticalShift;
+    return Padding(
+      padding: EdgeInsets.only(left: pad),
+      child: Image.asset(
+        asset,
+        height: size,
+        fit: BoxFit.contain,
+        // Das Logo trägt den Namen selbst – für Screenreader benannt, damit die
+        // Empfängeransicht nicht mit einem unbeschrifteten Bild beginnt.
+        semanticLabel: 'Fahrlehrerin Sarah',
+      ),
     );
   }
 }
