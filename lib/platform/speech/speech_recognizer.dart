@@ -20,16 +20,25 @@ class SpeechResult {
   /// `false` = Zwischenergebnis, das sich noch ändern kann.
   final bool isFinal;
 
+  /// Weitere Deutungen desselben Gesagten, absteigend nach Wahrscheinlichkeit
+  /// – **ohne** [transcript]. Die Web Speech API liefert bis zu drei; oft
+  /// steht das gesuchte Kommando erst in der zweiten wörtlich da.
+  final List<String> alternatives;
+
   const SpeechResult({
     required this.transcript,
     required this.confidence,
     required this.isFinal,
+    this.alternatives = const [],
   });
+
+  /// Alle Deutungen in Rangfolge – beste zuerst.
+  List<String> get hypotheses => [transcript, ...alternatives];
 
   @override
   String toString() =>
       'SpeechResult("$transcript", ${confidence.toStringAsFixed(2)}, '
-      'final=$isFinal)';
+      'final=$isFinal${alternatives.isEmpty ? '' : ', alt=$alternatives'})';
 }
 
 enum SpeechStatus {

@@ -20,22 +20,26 @@ Urgency maxUrgency(Iterable<Urgency> us) =>
     us.reduce((a, b) => a.index >= b.index ? a : b);
 
 /// Form, in der ein Kommando beim Empfänger als Verkehrszeichen erscheint.
-enum SignShape { none, triangle, round }
+/// `limit` = rundes Verbotszeichen mit Zahl, `ende` = Aufhebung (VZ 282).
+enum SignShape { none, limit, ende }
 
 /// Oberbereiche des Sender-Dashboards.
-enum DashboardMode { fahrt, zeichen, fahrzeug, fahrschueler }
+enum DashboardMode { fahrt, grundfahren, fahrzeug, fahrschueler }
 
 extension DashboardModeX on DashboardMode {
   String get label => switch (this) {
     DashboardMode.fahrt => 'Fahrt',
-    DashboardMode.zeichen => 'Zeichen',
+    // Kurz gehalten: der Umschalter hat vier Segmente, „Grundfahraufgaben"
+    // würde auf dem Handy zu „Grundfa…" verkürzt. Die Überschrift im
+    // Bereich schreibt den vollen Begriff aus.
+    DashboardMode.grundfahren => 'Aufgaben',
     DashboardMode.fahrzeug => 'Fahrzeug',
     DashboardMode.fahrschueler => 'Fahrschüler',
   };
 
   IconData get icon => switch (this) {
     DashboardMode.fahrt => Icons.directions_car,
-    DashboardMode.zeichen => Icons.signpost,
+    DashboardMode.grundfahren => Icons.assignment,
     DashboardMode.fahrzeug => Icons.build,
     DashboardMode.fahrschueler => Icons.school,
   };
@@ -43,11 +47,10 @@ extension DashboardModeX on DashboardMode {
 
 /// Themenbereiche (Kategorien). Jede Kategorie gehört zu genau einem Modus.
 enum CommandCategory {
-  gefahr,
   richtung,
   tempo,
   hinweis,
-  zeichen,
+  grundfahraufgabe,
   feedback,
   abfahrt,
   beleuchtung,
@@ -70,16 +73,15 @@ extension CommandCategoryX on CommandCategory {
     CommandCategory.feedback ||
     CommandCategory.coaching ||
     CommandCategory.organisation => DashboardMode.fahrschueler,
-    CommandCategory.zeichen => DashboardMode.zeichen,
+    CommandCategory.grundfahraufgabe => DashboardMode.grundfahren,
     _ => DashboardMode.fahrt,
   };
 
   String get label => switch (this) {
-    CommandCategory.gefahr => 'Gefahr',
     CommandCategory.richtung => 'Richtung',
     CommandCategory.tempo => 'Tempo',
     CommandCategory.hinweis => 'Hinweise',
-    CommandCategory.zeichen => 'Verkehrszeichen',
+    CommandCategory.grundfahraufgabe => 'Grundfahraufgaben',
     CommandCategory.feedback => 'Lob & Kritik',
     CommandCategory.abfahrt => 'Abfahrtkontrolle',
     CommandCategory.beleuchtung => 'Beleuchtung',
@@ -92,11 +94,10 @@ extension CommandCategoryX on CommandCategory {
   };
 
   IconData get icon => switch (this) {
-    CommandCategory.gefahr => Icons.warning_amber,
     CommandCategory.richtung => Icons.explore,
     CommandCategory.tempo => Icons.speed,
     CommandCategory.hinweis => Icons.checklist,
-    CommandCategory.zeichen => Icons.signpost,
+    CommandCategory.grundfahraufgabe => Icons.assignment,
     CommandCategory.feedback => Icons.thumbs_up_down,
     CommandCategory.abfahrt => Icons.fact_check,
     CommandCategory.beleuchtung => Icons.lightbulb,
@@ -110,11 +111,10 @@ extension CommandCategoryX on CommandCategory {
 
   /// Regenbogen-Farbe der Kategorie (farbliche Trennung im Dashboard).
   Color get color => switch (this) {
-    CommandCategory.gefahr => const Color(0xFFE53935), // Rot
     CommandCategory.richtung => const Color(0xFF1E88E5), // Blau
     CommandCategory.tempo => const Color(0xFFFB8C00), // Orange
     CommandCategory.hinweis => const Color(0xFF8E24AA), // Violett
-    CommandCategory.zeichen => const Color(0xFF00897B), // Türkis
+    CommandCategory.grundfahraufgabe => const Color(0xFF00897B), // Türkis
     CommandCategory.feedback => const Color(0xFF2E9E44), // Grün
     CommandCategory.abfahrt => const Color(0xFF2E7D32), // Grün
     CommandCategory.beleuchtung => const Color(0xFFF9A825), // Gelb
@@ -139,6 +139,22 @@ class CommandDef {
   /// worum es geht bzw. wie es geht. Leer = keine Erklärung anzeigen.
   final String explanation;
 
+  /// Als welches Verkehrszeichen die Empfängerseite dies darstellt.
+  /// Hängt **nicht** an der Kategorie: in „Tempo" stehen Zeichen (Tempo 30)
+  /// und Wort-Kommandos (Langsamer) nebeneinander.
+  final SignShape sign;
+
+  /// Aufschrift im runden Zeichen („30", „4-7"). Nur für [SignShape.limit].
+  final String signText;
+
+  /// Kurzform für die Sender-Kachel, wenn [label] dort zu lang wäre.
+  /// Der Empfänger zeigt immer das volle [label].
+  final String tileLabel;
+
+  /// Kommandos mit gleichem, nicht-leerem Gruppennamen stehen im Sender in
+  /// **einer** Zeile nebeneinander (z. B. die drei Kreisverkehr-Ausfahrten).
+  final String group;
+
   const CommandDef(
     this.key,
     this.label,
@@ -146,18 +162,19 @@ class CommandDef {
     this.urgency,
     this.category, {
     this.explanation = '',
+    this.sign = SignShape.none,
+    this.signText = '',
+    this.tileLabel = '',
+    this.group = '',
   });
 
   bool get hasExplanation => explanation.isNotEmpty;
 
   DashboardMode get mode => category.mode;
 
-  /// Als welches Verkehrszeichen die Empfängerseite dies darstellt.
-  SignShape get sign => switch (category) {
-    CommandCategory.gefahr => SignShape.triangle,
-    CommandCategory.zeichen => SignShape.round,
-    _ => SignShape.none,
-  };
+  /// Beschriftung der Sender-Kachel.
+  String get tileText => tileLabel.isEmpty ? label : tileLabel;
+
   bool get isSign => sign != SignShape.none;
 }
 
@@ -165,71 +182,16 @@ class CommandDef {
 ///
 /// **Urgency-Regel** (steuert Farbe + Vibration beim Empfänger – nach
 /// Reaktionsdringlichkeit vergeben, nicht nach Wichtigkeit des Themas):
-/// - `dringend` (rot): sofort reagieren – Gefahr für Menschen, Bremsen/Stopp.
+/// - `dringend` (rot): sofort reagieren – Bremsen/Stopp. Eine eigene
+///   *Kategorie* „Gefahr" gibt es bewusst nicht mehr (Rückmeldung aus der
+///   Fahrschule): im Ernstfall greift die Fahrlehrperson selbst ein, statt
+///   ein Kachelmenü zu bedienen.
 /// - `achtung` (gelb): erhöhte Vorsicht bzw. Verhalten im Fahrbetrieb
 ///   korrigieren (langsamer, Abstand, Vorfahrt gewähren …).
 /// - `info` (blau): normale Anweisungen sowie alles Lernen, Feedback und
 ///   Coaching – der gesamte Fahrzeug-Bereich ist deshalb durchgehend blau.
 const List<CommandDef> kCommandCatalog = [
   // ===== Modus FAHRT =====
-  // --- Gefahr ---
-  CommandDef(
-    'kinder',
-    'Kinder',
-    Icons.escalator_warning,
-    Urgency.dringend,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'tiere',
-    'Tiere',
-    Icons.pets,
-    Urgency.dringend,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'fussgaenger',
-    'Fußgänger',
-    Icons.directions_walk,
-    Urgency.achtung,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'radfahrer',
-    'Radfahrer',
-    Icons.directions_bike,
-    Urgency.achtung,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'gegenverkehr',
-    'Gegenverkehr',
-    Icons.sync_alt,
-    Urgency.achtung,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'hindernis',
-    'Hindernis',
-    Icons.dangerous,
-    Urgency.dringend,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'glaette',
-    'Glätte',
-    Icons.ac_unit,
-    Urgency.achtung,
-    CommandCategory.gefahr,
-  ),
-  CommandDef(
-    'achtung',
-    'Achtung!',
-    Icons.priority_high,
-    Urgency.dringend,
-    CommandCategory.gefahr,
-  ),
-
   // --- Richtung ---
   CommandDef(
     'links',
@@ -288,11 +250,22 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.richtung,
   ),
   CommandDef(
+    'ampel',
+    'Ampel',
+    Icons.traffic,
+    Urgency.info,
+    CommandCategory.richtung,
+  ),
+  // Die drei Kreisverkehr-Ausfahrten gehören zusammen und stehen deshalb
+  // per `group` immer in einer eigenen Zeile nebeneinander – sonst reißt
+  // der Zeilenumbruch sie je nach Displaybreite auseinander.
+  CommandDef(
     'ausfahrt1',
     '1. Ausfahrt',
     Icons.filter_1,
     Urgency.info,
     CommandCategory.richtung,
+    group: 'ausfahrten',
   ),
   CommandDef(
     'ausfahrt2',
@@ -300,6 +273,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.filter_2,
     Urgency.info,
     CommandCategory.richtung,
+    group: 'ausfahrten',
   ),
   CommandDef(
     'ausfahrt3',
@@ -307,6 +281,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.filter_3,
     Urgency.info,
     CommandCategory.richtung,
+    group: 'ausfahrten',
   ),
   CommandDef(
     'folgen',
@@ -319,13 +294,6 @@ const List<CommandDef> kCommandCatalog = [
     'rueckwaerts',
     'Rückwärts',
     Icons.arrow_downward,
-    Urgency.info,
-    CommandCategory.richtung,
-  ),
-  CommandDef(
-    'seitwaerts',
-    'Seitwärts einparken',
-    Icons.local_parking,
     Urgency.info,
     CommandCategory.richtung,
   ),
@@ -346,23 +314,9 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
   ),
   CommandDef(
-    'anhalten',
-    'Anhalten',
-    Icons.front_hand,
-    Urgency.achtung,
-    CommandCategory.tempo,
-  ),
-  CommandDef(
     'bremsen',
     'Bremsen',
     Icons.report_problem,
-    Urgency.dringend,
-    CommandCategory.tempo,
-  ),
-  CommandDef(
-    'stopp',
-    'STOPP',
-    Icons.pan_tool,
     Urgency.dringend,
     CommandCategory.tempo,
   ),
@@ -373,12 +327,84 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.tempo,
   ),
+  // Tempovorgaben als echte Verkehrszeichen – dieselbe Bildsprache, die
+  // am Straßenrand steht, ist ohne Sprache am schnellsten zu erfassen.
+  // `info`, nicht `achtung`: es ist eine Vorgabe, keine Gefahrenmeldung.
+  CommandDef(
+    't_schritt',
+    '4–7 km/h',
+    Icons.directions_walk,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '4-7',
+    tileLabel: 'Schritttempo',
+  ),
+  CommandDef(
+    't_30',
+    'Tempo 30',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '30',
+  ),
+  CommandDef(
+    't_50',
+    'Tempo 50',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '50',
+  ),
+  CommandDef(
+    't_70',
+    'Tempo 70',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '70',
+  ),
+  CommandDef(
+    't_100',
+    'Tempo 100',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '100',
+  ),
+  CommandDef(
+    't_frei',
+    'Unbegrenzt',
+    Icons.all_inclusive,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.ende,
+  ),
 
   // --- Hinweise ---
+  CommandDef(
+    'reihenfolge',
+    'Spiegel – Blinker – Schulterblick',
+    Icons.format_list_numbered,
+    Urgency.info,
+    CommandCategory.hinweis,
+    tileLabel: 'Reihenfolge',
+  ),
   CommandDef(
     'spiegel',
     'Spiegel',
     Icons.visibility,
+    Urgency.info,
+    CommandCategory.hinweis,
+  ),
+  CommandDef(
+    'blinker',
+    'Blinker',
+    Icons.highlight,
     Urgency.info,
     CommandCategory.hinweis,
   ),
@@ -390,10 +416,24 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.hinweis,
   ),
   CommandDef(
-    'blinker',
-    'Blinker',
-    Icons.highlight,
+    'rundumblick',
+    'Rundumblick',
+    Icons.zoom_out_map,
     Urgency.info,
+    CommandCategory.hinweis,
+  ),
+  CommandDef(
+    'nach_hinten',
+    'Nach hinten schauen',
+    Icons.remove_red_eye,
+    Urgency.info,
+    CommandCategory.hinweis,
+  ),
+  CommandDef(
+    'hindernis',
+    'Hindernis',
+    Icons.dangerous,
+    Urgency.achtung,
     CommandCategory.hinweis,
   ),
   CommandDef(
@@ -410,49 +450,58 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.hinweis,
   ),
-
-  // --- Verkehrszeichen ---
   CommandDef(
-    'z_stop',
-    'Stopp-Schild',
-    Icons.do_not_disturb_on,
+    'anhalten',
+    'Anhalten',
+    Icons.front_hand,
+    Urgency.achtung,
+    CommandCategory.hinweis,
+  ),
+  CommandDef(
+    'stopp',
+    'STOPP',
+    Icons.pan_tool,
     Urgency.dringend,
-    CommandCategory.zeichen,
+    CommandCategory.hinweis,
   ),
+
+  // ===== Modus GRUNDFAHRAUFGABEN =====
+  // Die Prüfungsaufgaben nach FahrschAusbO. Durchgehend `info`: sie werden
+  // *angekündigt*, bevor es losgeht – nichts davon ist eine Sofortreaktion.
   CommandDef(
-    'z_vorfahrt_gewaehren',
-    'Vorfahrt gewähren',
-    Icons.change_history,
-    Urgency.achtung,
-    CommandCategory.zeichen,
-  ),
-  CommandDef(
-    'z_vorfahrtstrasse',
-    'Vorfahrtstraße',
-    Icons.diamond,
+    'gfa_laengs',
+    'Längs parken',
+    Icons.local_parking,
     Urgency.info,
-    CommandCategory.zeichen,
+    CommandCategory.grundfahraufgabe,
   ),
   CommandDef(
-    'z_tempo30',
-    'Tempo 30',
-    Icons.speed,
-    Urgency.achtung,
-    CommandCategory.zeichen,
-  ),
-  CommandDef(
-    'z_ueberholverbot',
-    'Überholverbot',
-    Icons.block,
-    Urgency.achtung,
-    CommandCategory.zeichen,
-  ),
-  CommandDef(
-    'z_einbahn',
-    'Einbahnstraße',
-    Icons.trending_flat,
+    'gfa_quer',
+    'Quer parken',
+    Icons.view_week,
     Urgency.info,
-    CommandCategory.zeichen,
+    CommandCategory.grundfahraufgabe,
+  ),
+  CommandDef(
+    'gfa_bremsung',
+    'Gefahrenbremsung',
+    Icons.crisis_alert,
+    Urgency.info,
+    CommandCategory.grundfahraufgabe,
+  ),
+  CommandDef(
+    'gfa_ecke',
+    'Rechts um die Ecke',
+    Icons.subdirectory_arrow_right,
+    Urgency.info,
+    CommandCategory.grundfahraufgabe,
+  ),
+  CommandDef(
+    'gfa_umkehren',
+    'Umkehren',
+    Icons.u_turn_right,
+    Urgency.info,
+    CommandCategory.grundfahraufgabe,
   ),
 
   // --- Lob & Kritik (Fahrschüler-Bereich) ---

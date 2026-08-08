@@ -6,25 +6,21 @@ import 'package:fahrsignal/transport/fake_transport.dart';
 import 'package:fahrsignal/ui/receiver_view.dart';
 
 void main() {
-  testWidgets('Empfänger rendert 3er-Kombi (auch aus Zeichen) ohne Fehler', (
+  testWidgets('Empfänger rendert 3er-Kombi (auch mit Zeichen) ohne Fehler', (
     tester,
   ) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: ReceiverView())),
     );
 
-    // Kombi aus drei Verkehrszeichen in denselben Raum ('DEV') senden.
+    // Kombi mit einem Verkehrszeichen an der Spitze in den Raum 'DEV'.
     FakeTransport('DEV').sendCommand(
-      DriveCommand.combo([
-        'z_stop',
-        'z_tempo30',
-        'z_vorfahrt_gewaehren',
-      ], Urgency.dringend),
+      DriveCommand.combo(['t_30', 'spiegel', 'schulterblick'], Urgency.info),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('STOPP-SCHILD'), findsOneWidget);
+    expect(find.text('TEMPO 30'), findsOneWidget);
   });
 }

@@ -75,9 +75,12 @@ extension type _MediaTrack._(JSObject _) implements JSObject {
   external void stop();
 }
 
-/// Maximale Zahl automatischer Neustarts pro Haltevorgang. Verhindert eine
-/// Endlosschleife, wenn das Mikrofon dauerhaft nichts liefert.
-const int _maxRestarts = 5;
+/// Maximale Zahl **erfolgloser** automatischer Neustarts hintereinander.
+/// Verhindert eine Endlosschleife, wenn das Mikrofon dauerhaft nichts liefert.
+/// Sobald ein Ergebnis ankommt, beginnt die Zählung von vorn – sonst wäre bei
+/// einem längeren Haltevorgang irgendwann stumm Schluss, obwohl gesprochen
+/// wird (Safari beendet die Erkennung nach jeder Sprechpause von selbst).
+const int _maxRestarts = 12;
 
 class WebSpeechRecognizer implements SpeechRecognizer {
   final _results = StreamController<SpeechResult>.broadcast();
@@ -109,7 +112,8 @@ class WebSpeechRecognizer implements SpeechRecognizer {
       // iOS ignoriert `continuous`; wir starten stattdessen selbst neu.
       ..continuous = false
       ..interimResults = true
-      ..maxAlternatives = 3;
+      // Mehr Deutungen kosten nichts und geben dem Parser mehr zu prüfen.
+      ..maxAlternatives = 5;
 
     rec.onresult = ((JSObject event) => _onResult(_ResultEvent._(event))).toJS;
     rec.onerror = ((JSObject event) => _onError(_ErrorEvent._(event))).toJS;
@@ -128,6 +132,21 @@ class WebSpeechRecognizer implements SpeechRecognizer {
       final best = result.item(0);
       final text = best.transcript.trim();
       if (text.isEmpty) continue;
+      // Es kommt etwas an – das Neustart-Budget für die nächste Sprechpause
+      // ist damit wieder voll.
+      _restarts = 0;
+
+      // Die weiteren Deutungen mitnehmen, statt sie wegzuwerfen: „Blinke"
+      // als beste und „Blinker" als zweite Hypothese ist der Alltagsfall,
+      // an dem die Erkennung sonst scheitert. Auswerten tut der Parser.
+      final alternatives = <String>[];
+      for (var a = 1; a < result.length; a++) {
+        final alt = result.item(a).transcript.trim();
+        if (alt.isNotEmpty && alt != text && !alternatives.contains(alt)) {
+          alternatives.add(alt);
+        }
+      }
+
       _results.add(
         SpeechResult(
           transcript: text,
@@ -135,6 +154,7 @@ class WebSpeechRecognizer implements SpeechRecognizer {
           // trägt eine belastbare Konfidenz.
           confidence: result.isFinal ? best.confidence : 0,
           isFinal: result.isFinal,
+          alternatives: result.isFinal ? alternatives : const [],
         ),
       );
     }

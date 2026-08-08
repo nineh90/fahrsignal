@@ -10,6 +10,24 @@
 /// Invariantentest prüft, dass jede Phrase unter der Normalisierung stabil ist.
 library;
 
+/// Zahlwort → Ziffer. Die Spracherkennung liefert dasselbe Gesagte mal so,
+/// mal so („Tempo 30" / „Tempo dreißig"); `normalizeUtterance()` vereinheitlicht
+/// es auf die Ziffer, und die Phrasen unten stehen deshalb in Ziffernform.
+const Map<String, String> kNumberWords = {
+  'zwanzig': '20',
+  'dreissig': '30',
+  'vierzig': '40',
+  'fuenfzig': '50',
+  'sechzig': '60',
+  'siebzig': '70',
+  'achtzig': '80',
+  'neunzig': '90',
+  'hundert': '100',
+  'einhundert': '100',
+  'vier': '4',
+  'sieben': '7',
+};
+
 /// Kommando-Key → Varianten, unter denen es gesprochen erkannt wird.
 ///
 /// Faustregeln, die sich aus der Katalog-Analyse ergeben haben:
@@ -20,30 +38,16 @@ library;
 /// - Akronyme in Sprechform ergänzen („a b s", „anti blockier system").
 const Map<String, List<String>> kCommandPhrases = {
   // ===================== MODUS FAHRT =====================
-  // --- Gefahr ---
-  'kinder': [
-    'kinder',
-    'achtung kinder',
-    'kind am strassenrand',
-    'spielende kinder',
-  ],
-  'tiere': ['tiere', 'tier', 'wild', 'reh', 'tier auf der strasse'],
-  'fussgaenger': ['fussgaenger', 'passant', 'person auf der fahrbahn'],
-  'radfahrer': ['radfahrer', 'fahrradfahrer', 'fahrrad', 'velo'],
-  'gegenverkehr': ['gegenverkehr', 'entgegenkommender verkehr'],
-  'hindernis': ['hindernis', 'baustelle', 'engstelle', 'blockiert'],
-  'glaette': ['glaette', 'glatt', 'glatteis', 'rutschig'],
-  // Nur als Alleinäußerung ein Kommando – siehe Sonderregel im Parser.
-  'achtung': ['achtung', 'vorsicht', 'aufpassen'],
-
   // --- Richtung ---
-  'links': ['links', 'nach links', 'linke seite'],
-  'rechts': ['rechts', 'nach rechts', 'rechte seite'],
+  'links': ['links', 'nach links', 'linke seite', 'links halten'],
+  'rechts': ['rechts', 'nach rechts', 'rechte seite', 'rechts halten'],
   'geradeaus': [
     'geradeaus',
     'gerade aus',
+    'gerade',
     'weiter geradeaus',
     'einfach geradeaus',
+    'immer geradeaus',
   ],
   'abbiegen_links': [
     'links abbiegen',
@@ -62,11 +66,31 @@ const Map<String, List<String>> kCommandPhrases = {
     'rechts rein',
   ],
   'wenden': ['wenden', 'umdrehen', 'wende', 'kehrt machen'],
-  'einordnen': ['einordnen', 'ordne dich ein', 'spur wechseln', 'einfaedeln'],
-  'kreisverkehr': ['kreisverkehr', 'kreisel', 'in den kreisverkehr'],
+  'einordnen': [
+    'einordnen',
+    'ordne dich ein',
+    'spur wechseln',
+    'einfaedeln',
+    'links einordnen',
+    'rechts einordnen',
+  ],
+  'kreisverkehr': [
+    'kreisverkehr',
+    'kreisel',
+    'in den kreisverkehr',
+    'im kreisverkehr',
+  ],
   'ausfahrt1': ['erste ausfahrt', 'ausfahrt eins'],
   'ausfahrt2': ['zweite ausfahrt', 'ausfahrt zwei'],
   'ausfahrt3': ['dritte ausfahrt', 'ausfahrt drei'],
+  'ampel': [
+    'ampel',
+    'an der ampel',
+    'lichtzeichenanlage',
+    'die ampel',
+    'ampel beachten',
+    'auf die ampel achten',
+  ],
   'folgen': [
     'der strasse folgen',
     'strasse folgen',
@@ -74,11 +98,6 @@ const Map<String, List<String>> kCommandPhrases = {
     'weiter folgen',
   ],
   'rueckwaerts': ['rueckwaerts', 'zurueck setzen', 'rueckwaerts fahren'],
-  'seitwaerts': [
-    'seitwaerts einparken',
-    'seitwaerts parken',
-    'laengs einparken',
-  ],
 
   // --- Tempo ---
   'langsamer': [
@@ -87,24 +106,97 @@ const Map<String, List<String>> kCommandPhrases = {
     'langsam',
     'runter vom gas',
     'gas weg',
+    'vom gas gehen',
+    'etwas langsamer',
+    'nicht so schnell',
   ],
-  'schneller': ['schneller', 'mehr gas', 'zuegiger', 'etwas schneller'],
-  'anhalten': ['anhalten', 'halt an', 'ranfahren', 'rechts ranfahren'],
-  'bremsen': ['bremsen', 'brems', 'bremse jetzt'],
-  // „halt" fehlt hier bewusst: als Füllwort („ist halt so") würde es
-  // dauernd einen roten STOPP auslösen. „halt an" bleibt über `anhalten`.
-  'stopp': ['stopp', 'stop', 'sofort anhalten'],
-  'parken': ['parken', 'einparken', 'parkluecke', 'halten'],
+  'schneller': [
+    'schneller',
+    'mehr gas',
+    'zuegiger',
+    'etwas schneller',
+    'gas geben',
+  ],
+  'bremsen': ['bremsen', 'brems', 'bremse jetzt', 'abbremsen'],
+  'parken': ['parken', 'parkluecke', 'halten', 'hier halten'],
+  // Tempovorgaben. Die nackten Zahlen sind bewusst dabei – „fünfzig" sagt
+  // eine Fahrlehrperson im Auto sonst nicht beiläufig. Ziffernform, weil
+  // `kNumberWords` beim Normalisieren dorthin auflöst.
+  't_schritt': [
+    'schrittgeschwindigkeit',
+    'schritttempo',
+    'schritt tempo',
+    '4 bis 7',
+  ],
+  't_30': ['tempo 30', '30', '30er zone', 'dreissiger zone', '30 fahren'],
+  't_50': ['tempo 50', '50', '50 fahren', 'innerorts 50'],
+  't_70': ['tempo 70', '70', '70 fahren'],
+  't_100': ['tempo 100', '100', '100 fahren'],
+  't_frei': [
+    'unbegrenzt',
+    'tempo unbegrenzt',
+    'keine begrenzung',
+    'aufhebung',
+    'freie fahrt',
+    'so schnell du willst',
+  ],
 
   // --- Hinweise ---
-  'spiegel': ['spiegel', 'in den spiegel schauen', 'spiegel kontrollieren'],
+  'reihenfolge': [
+    'reihenfolge',
+    'spiegel blinker schulterblick',
+    'in der reihenfolge',
+  ],
+  'spiegel': [
+    'spiegel',
+    'in den spiegel schauen',
+    'spiegel kontrollieren',
+    'spiegel schauen',
+    'in den spiegel',
+    'spiegel gucken',
+  ],
+  'blinker': [
+    'blinker',
+    'blinken',
+    'blinker setzen',
+    'blinker rein',
+    'blinker nicht vergessen',
+    'blinken nicht vergessen',
+  ],
   'schulterblick': [
     'schulterblick',
     'ueber die schulter schauen',
     'toter winkel',
+    'schulterblick machen',
+    'schulterblick nicht vergessen',
   ],
-  'blinker': ['blinker', 'blinken', 'blinker setzen', 'blinker rein'],
-  'abstand': ['abstand', 'mehr abstand', 'abstand halten', 'zu dicht'],
+  'rundumblick': [
+    'rundumblick',
+    'rundum schauen',
+    'rundum blick',
+    'rundumsicht',
+  ],
+  'nach_hinten': [
+    'nach hinten schauen',
+    'nach hinten sehen',
+    'blick nach hinten',
+    'nach hinten',
+  ],
+  'hindernis': [
+    'hindernis',
+    'baustelle',
+    'engstelle',
+    'blockiert',
+    'da ist ein hindernis',
+  ],
+  'abstand': [
+    'abstand',
+    'mehr abstand',
+    'abstand halten',
+    'zu dicht',
+    'mehr abstand halten',
+    'zu dicht dran',
+  ],
   'gang': [
     'gang wechseln',
     'schalten',
@@ -112,26 +204,33 @@ const Map<String, List<String>> kCommandPhrases = {
     'runterschalten',
     'gang raus',
   ],
+  'anhalten': [
+    'anhalten',
+    'halt an',
+    'ranfahren',
+    'rechts ranfahren',
+    'rechts ran',
+    'stehen bleiben',
+    'stehenbleiben',
+  ],
+  // „halt" fehlt hier bewusst: als Füllwort („ist halt so") würde es
+  // dauernd einen roten STOPP auslösen. „halt an" bleibt über `anhalten`.
+  'stopp': ['stopp', 'stop', 'sofort anhalten', 'sofort stehen bleiben'],
 
-  // ===================== MODUS ZEICHEN =====================
-  'z_stop': ['stopp schild', 'stoppschild', 'haltelinie'],
-  'z_vorfahrt_gewaehren': [
-    'vorfahrt gewaehren',
-    'vorfahrt achten',
-    'vorfahrt beachten',
+  // ===================== MODUS GRUNDFAHRAUFGABEN =====================
+  // „seitwaerts einparken" hört hier mit: das frühere Richtungs-Kommando
+  // ist genau diese Grundfahraufgabe, gesprochen soll es weiter greifen.
+  'gfa_laengs': [
+    'laengs parken',
+    'laengs einparken',
+    'seitwaerts einparken',
+    'seitwaerts parken',
+    'einparken',
   ],
-  'z_vorfahrtstrasse': [
-    'vorfahrtstrasse',
-    'vorfahrt strasse',
-    'du hast vorfahrt',
-  ],
-  'z_tempo30': ['tempo dreissig', 'dreissiger zone', 'tempo limit dreissig'],
-  'z_ueberholverbot': [
-    'ueberholverbot',
-    'nicht ueberholen',
-    'ueberholen verboten',
-  ],
-  'z_einbahn': ['einbahnstrasse', 'einbahn'],
+  'gfa_quer': ['quer parken', 'quer einparken', 'rueckwaerts quer einparken'],
+  'gfa_bremsung': ['gefahrenbremsung', 'gefahrbremsung', 'zielbremsung'],
+  'gfa_ecke': ['rechts um die ecke', 'rueckwaerts um die ecke', 'um die ecke'],
+  'gfa_umkehren': ['umkehren', 'umkehr', 'umkehren durch rueckwaertsfahren'],
 
   // ===================== MODUS FAHRZEUG =====================
   // --- Abfahrtkontrolle ---
@@ -280,7 +379,16 @@ const Set<String> kUrgencyBoosters = {
   'gleich',
 };
 
-/// Füllwörter, die vor dem Abgleich entfernt werden.
+/// Füllwörter: zählen nicht gegen die Abdeckung.
+///
+/// Das ist der Stellhebel dafür, ob ein **ganzer Satz** noch sicher genug ist:
+/// „so, dann fährst du jetzt bitte mal rechts ran" enthält ein Kommando und
+/// neun Wörter drumherum. Ohne großzügige Liste rutscht die Abdeckung unter
+/// die Schwelle und alles landet in der Rückfrage – genau das Gefühl von
+/// „er versteht mich nicht".
+///
+/// Ungefährlich, weil Phrasen **vor** dieser Liste greifen: „weiter geradeaus"
+/// wird als Ganzes getroffen, bevor „weiter" hier überhaupt gefragt wird.
 const Set<String> kFillerWords = {
   'so', 'jetzt', 'mal', 'bitte', 'dann', 'und', 'aehm', 'aeh', 'okay', 'ok',
   'du', 'ja', 'also', 'hier', 'da', 'wir', 'ich', 'nun', 'eben', 'halt',
@@ -293,6 +401,14 @@ const Set<String> kFillerWords = {
   // vorher vom Phrasentreffer konsumiert).
   'der', 'die', 'das', 'den', 'dem', 'ein', 'eine', 'einen', 'mir', 'mich',
   'ab',
+  // Präpositionen und Partikeln, die im Auto ständig mitlaufen.
+  'in', 'im', 'an', 'am', 'auf', 'zu', 'zum', 'zur', 'bei', 'von', 'vom',
+  'mit', 'nach', 'fuer', 'noch', 'ganz', 'etwas', 'kurz', 'weiter', 'wieder',
+  'schon', 'sehr', 'bisschen', 'vielleicht', 'einfach',
+  // Verben des Aufforderns – tragen keine Bedeutung über das Kommando hinaus.
+  'fahr', 'fahre', 'faehrst', 'fahren', 'mach', 'machst', 'machen', 'geh',
+  'gehst', 'nimm', 'nimmst', 'musst', 'muss', 'kannst', 'solltest', 'wuerde',
+  'werden', 'wirst', 'bist', 'ist', 'sind', 'war', 'hast', 'hat', 'haben',
 };
 
 /// Wörter, die ein Kommando als **Abfrage** markieren („frag den

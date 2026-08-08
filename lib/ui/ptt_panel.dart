@@ -69,6 +69,13 @@ class _PttBarState extends ConsumerState<PttBar> {
       final listening = s == SpeechStatus.listening;
       if (!listening && !_holding) _handleRecognitionEnd();
       setState(() => _listening = listening);
+      // Fehler der Erkennung selbst (Funkloch, Mikrofon weg) blieben bisher
+      // unsichtbar: der Knopf ging einfach in den Normalzustand zurück und es
+      // passierte nichts. Im Auto ist das nicht von „nicht verstanden" zu
+      // unterscheiden – deshalb der Klartext.
+      if (s == SpeechStatus.error && recognizer.lastError.isNotEmpty) {
+        _flashNotice(recognizer.lastError);
+      }
     });
   }
 
@@ -99,13 +106,18 @@ class _PttBarState extends ConsumerState<PttBar> {
 
     _gotFinal = true;
     setState(() => _interim = '');
-    _handleTranscript(r.transcript, r.confidence <= 0 ? 0.9 : r.confidence);
+    _handleTranscript(r.hypotheses, r.confidence <= 0 ? 0.9 : r.confidence);
   }
 
-  void _handleTranscript(String text, double asrConfidence) {
-    final intent = parseUtterance(
-      text,
+  void _handleTranscript(
+    List<String> hypotheses,
+    double asrConfidence, {
+    bool provisional = false,
+  }) {
+    final intent = parseBestOf(
+      hypotheses,
       asrConfidence: asrConfidence,
+      provisional: provisional,
       urgencyOf: _urgencyOf,
     );
 
@@ -129,7 +141,7 @@ class _PttBarState extends ConsumerState<PttBar> {
     if (text.isEmpty) {
       _flashNotice('Nichts verstanden – nochmal versuchen');
     } else {
-      _handleTranscript(text, 0.6);
+      _handleTranscript([text], 0.6, provisional: true);
     }
   }
 
@@ -139,7 +151,7 @@ class _PttBarState extends ConsumerState<PttBar> {
       _notice = text;
       _confirmed = null;
     });
-    _flashTimer = Timer(const Duration(milliseconds: 2000), () {
+    _flashTimer = Timer(const Duration(milliseconds: 3500), () {
       if (mounted) setState(() => _notice = null);
     });
   }

@@ -51,14 +51,12 @@ void expectIntent(
 
 // Urgency-Nachschlag ohne Flutter-Abhängigkeit (Auszug aus dem Katalog).
 const _urgencies = <String, Urgency>{
-  'kinder': Urgency.dringend,
-  'fussgaenger': Urgency.achtung,
   'bremsen': Urgency.dringend,
   'stopp': Urgency.dringend,
   'langsamer': Urgency.achtung,
   'abstand': Urgency.achtung,
-  'achtung': Urgency.dringend,
-  'hindernis': Urgency.dringend,
+  'anhalten': Urgency.achtung,
+  'hindernis': Urgency.achtung,
 };
 Urgency _urgencyOf(String key) => _urgencies[key] ?? Urgency.info;
 
@@ -76,21 +74,29 @@ void main() {
   expectIntent('links', key: 'links');
   expectIntent('aussenspiegel links', key: 'aussenspiegel_l');
   expectIntent('stopp', key: 'stopp', urgency: Urgency.dringend);
-  expectIntent('stopp schild', key: 'z_stop');
   expectIntent('bremse', key: 'bremse');
   expectIntent('handbremse', key: 'handbremse');
   expectIntent('abstand', key: 'abstand');
   expectIntent('abstandstempomat', key: 'acc');
+  expectIntent('laengs einparken', key: 'gfa_laengs');
+  expectIntent('einparken', key: 'gfa_laengs');
 
-  print('\n=== "Achtung"-Sonderregel ===');
-  expectIntent('achtung', key: 'achtung', urgency: Urgency.dringend);
-  // Als Verstaerker: Kommando bleibt fussgaenger, Urgency steigt achtung→dringend
-  expectIntent(
-    'achtung fussgaenger',
-    key: 'fussgaenger',
-    urgency: Urgency.dringend,
-  );
-  expectIntent('vorsicht kinder', key: 'kinder', urgency: Urgency.dringend);
+  print('\n=== Neue Kommandos aus dem Fahrschul-Feedback ===');
+  expectIntent('ampel', key: 'ampel');
+  expectIntent('tempo dreissig', key: 't_30');
+  expectIntent('fuenfzig', key: 't_50');
+  expectIntent('unbegrenzt', key: 't_frei');
+  expectIntent('schrittgeschwindigkeit', key: 't_schritt');
+  expectIntent('reihenfolge', key: 'reihenfolge');
+  expectIntent('rundumblick', key: 'rundumblick');
+  expectIntent('nach hinten schauen', key: 'nach_hinten');
+  expectIntent('gefahrenbremsung', key: 'gfa_bremsung');
+  expectIntent('quer parken', key: 'gfa_quer');
+  expectIntent('rechts um die ecke', key: 'gfa_ecke');
+  expectIntent('umkehren', key: 'gfa_umkehren');
+  // „Gefahr" ist raus: „achtung"/„vorsicht" sind nur noch Verstaerker.
+  expectIntent('achtung', outcome: ParseOutcome.unmatched);
+  expectIntent('vorsicht bremsen', key: 'bremsen', urgency: Urgency.dringend);
 
   print('\n=== Dringlichkeitsverstaerker ===');
   expectIntent('sofort bremsen', key: 'bremsen', urgency: Urgency.dringend);
@@ -99,6 +105,7 @@ void main() {
     key: 'langsamer',
     urgency: Urgency.dringend,
   );
+  expectIntent('sofort anhalten', key: 'stopp', urgency: Urgency.dringend);
 
   print('\n=== Verneinung darf kein Lob senden ===');
   expectIntent('gut gemacht', key: 'lob');
@@ -138,13 +145,36 @@ void main() {
   expectIntent('bremse', key: 'bremse'); // Fahrzeug-Key, auch im Fahrt-Tab
   expectIntent('links', key: 'links'); // Fahrt-Key, auch im Fahrzeug-Tab
 
-  print('\n=== Aehnlichkeits-Vorschlaege bei Nicht-Treffern ===');
-  expectIntent('hup', outcome: ParseOutcome.unmatched, mustSuggest: 'hupe');
-  expectIntent(
-    'warndreiek',
-    outcome: ParseOutcome.unmatched,
-    mustSuggest: 'warndreieck',
+  print(
+    '\n=== Unscharfe Treffer: Verhoerer duerfen nicht ins Leere laufen ===',
   );
+  // Genau der Alltagsfall: die Erkennung verschluckt oder verdreht einen
+  // Buchstaben. Frueher: stumme Rueckfrage. Jetzt: erkannt, mit Abschlag.
+  expectIntent('warndreiek', key: 'warndreieck');
+  expectIntent('schulterblik', key: 'schulterblick');
+  expectIntent('gefahrenbremsun', key: 'gfa_bremsung');
+  expectIntent('verbandkast', key: 'verbandskasten');
+  // Zu kurz zum Raten – bleibt Vorschlag statt Treffer.
+  expectIntent('hup', outcome: ParseOutcome.unmatched, mustSuggest: 'hupe');
+
+  print('\n=== Ganze Saetze, wie sie im Auto fallen ===');
+  expectIntent(
+    'so, dann faehrst du jetzt bitte mal rechts ran',
+    key: 'anhalten',
+  );
+  expectIntent(
+    'an der naechsten kreuzung rechts',
+    key: 'abbiegen_rechts',
+    ord: 1,
+  );
+  expectIntent('du musst noch den schulterblick machen', key: 'schulterblick');
+  expectIntent('hier faehrst du bitte 30', key: 't_30');
+  expectIntent('wir machen jetzt mal quer parken', key: 'gfa_quer');
+  expectIntent('schau kurz in den spiegel', key: 'spiegel');
+  // Lob und Mahnung im selben Satz: das „nicht" gehoert zur Phrase und
+  // darf das Lob nicht kippen.
+  expectIntent('gut gemacht', key: 'lob', extra: []);
+  expectIntent('blinker nicht vergessen', key: 'blinker');
 
   print('\n=== Fuellwoerter duerfen nichts ausloesen ===');
   expectIntent('das ist halt so', outcome: ParseOutcome.unmatched);
@@ -154,6 +184,27 @@ void main() {
     outcome: ParseOutcome.unmatched,
   );
   expectIntent('', outcome: ParseOutcome.unmatched);
+
+  print('\n=== Mehrere Erkennungs-Hypothesen ===');
+  checks++;
+  // Beste Hypothese ist Unsinn, die zweite trifft – frueher ging das verloren.
+  final multi = parseBestOf(['links ab bigen', 'links abbiegen']);
+  if (multi.outcome == ParseOutcome.matched && multi.key == 'abbiegen_links') {
+    print('  ok   zweite Hypothese gewinnt → ${multi.key}');
+  } else {
+    failures++;
+    print('  FAIL Hypothesenauswahl: $multi');
+  }
+  checks++;
+  // Trifft keine, sammelt die Rueckfrage die Vorschlaege aus allen.
+  final none = parseBestOf(['hup', 'huhe']);
+  if (none.outcome == ParseOutcome.unmatched &&
+      none.alternatives.contains('hupe')) {
+    print('  ok   Vorschlaege aus allen Hypothesen: ${none.alternatives}');
+  } else {
+    failures++;
+    print('  FAIL Hypothesen-Vorschlaege: $none');
+  }
 
   print('\n=== Ordinal ohne Anker ist kein Ordinal ===');
   expectIntent('beim zweiten mal blinken', key: 'blinker', ord: 0);

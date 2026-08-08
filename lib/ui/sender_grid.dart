@@ -283,22 +283,55 @@ class _CategorySection extends StatelessWidget {
             ],
           ),
         ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 118,
-            mainAxisExtent: 84,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: items.length,
-          itemBuilder: (_, i) => _CommandTile(def: items[i], onTap: onTap),
-        ),
-        const SizedBox(height: 14),
+        for (final row in _rows(items)) ...[
+          if (row.first.group.isEmpty)
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 118,
+                mainAxisExtent: 84,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: row.length,
+              itemBuilder: (_, i) => _CommandTile(def: row[i], onTap: onTap),
+            )
+          else
+            // Feste Spaltenzahl = Gruppengröße: die Gruppe steht garantiert
+            // in einer Zeile, unabhängig von der Displaybreite.
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: row.length,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 118 / 84,
+              children: [
+                for (final d in row) _CommandTile(def: d, onTap: onTap),
+              ],
+            ),
+          const SizedBox(height: 10),
+        ],
+        const SizedBox(height: 4),
       ],
     );
   }
+}
+
+/// Zerlegt die Kommandos einer Kategorie in Blöcke: aufeinanderfolgende
+/// Einträge mit derselben `group` bilden einen eigenen Block (= eine Zeile),
+/// alles Gruppenlose fließt zusammen im normalen Raster.
+List<List<CommandDef>> _rows(List<CommandDef> items) {
+  final rows = <List<CommandDef>>[];
+  for (final d in items) {
+    if (rows.isNotEmpty && rows.last.first.group == d.group) {
+      rows.last.add(d);
+    } else {
+      rows.add([d]);
+    }
+  }
+  return rows;
 }
 
 class _CommandTile extends StatelessWidget {
@@ -327,7 +360,7 @@ class _CommandTile extends StatelessWidget {
                       : Icon(def.icon, color: Colors.white, size: 27),
                   const SizedBox(height: 6),
                   Text(
-                    def.label,
+                    def.tileText,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
