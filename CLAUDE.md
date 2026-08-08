@@ -202,6 +202,76 @@ Start: `flutter run -d linux -t lib/dev_harness.dart` → links „LINKS senden"
 erscheint sofort das Kommando. Von hier aus die echten `ui/`-Widgets, Urgency-Farben und den
 `HybridTransport` ausbauen.
 
+## Logo & App-Icons
+
+Die App trägt seit dem 08.08.2026 **Sarahs Logo** (Regenbogenbogen um ein Lenkrad mit
+Rollstuhl-Piktogramm, darunter „Fahrlehrerin Sarah"). Vorlagen liegen in `images/`,
+kopiert aus `kunden/fahrlehrerin_sarah/` – dort steht in der `CLAUDE.md` die
+ausführliche Herleitung:
+
+| Datei | Was |
+|---|---|
+| `images/logo_sarah_master.png` | volles Logo, freigestellt, 1254 px – Quelle aller Ableitungen |
+| `images/logo_sarah_bogen.webp` | nur der Bogen, 1000 px – Bühne für das Signet |
+| `assets/logo_sarah[_hell].webp` | volles Logo für helle / dunkle Gründe |
+| `assets/logo_sarah_signet[_hell].webp` | Bogen + Lenkrad **ohne Schriftzug** |
+
+Regeln – kommen aus dem Logo selbst, nicht aus Geschmack:
+
+- **Unter rund 60 px immer das Signet.** Das Logo trägt seinen Text mit; klein skaliert
+  wäre „Fahrlehrerin Sarah" nur Matsch. Deshalb Sender-Header und Empfängerschirm mit
+  `SarahLogo(signet: true)`, der Startbildschirm mit dem vollen Logo.
+- **Auf dunklem Grund die `_hell`-Variante** (Schrift creme, Lenkrad invertiert), sonst
+  verschwindet „Fahrlehrerin" im Grund. `SarahLogo` wählt sie nach der Theme-Helligkeit;
+  auf dem Empfängerschirm bestimmt aber die Dringlichkeitsfarbe den Grund → dort setzt
+  der Aufrufer `onDark` selbst (hell außer auf Gelb).
+- **WebP, nicht PNG** – die Aquarell-Verläufe komprimieren als PNG viermal so groß
+  (1,2 MB statt 300 kB), und die Web-App wird über Mobilfunk geladen.
+- Das alte `FahrSignalLogo` (gezeichnetes Lenkrad im Regenbogen-Ring) bleibt in
+  `lib/ui/brand.dart`, ist aber **nirgends mehr eingebunden** – aufgehoben als neutrale
+  Marke, falls die App über Sarahs Fahrschule hinauswächst.
+
+Ableitungen neu bauen (aus der Projektwurzel, ImageMagick 7). Das Signet ist eine
+**Neukomposition**, kein Ausschnitt: im Originallogo sitzt das Lenkrad hoch und rechts,
+weil darunter der Schriftzug steht – ausgeschnitten hinge es schief in der Öffnung.
+
+```sh
+# 1. Lenkrad als runde Scheibe ausstanzen und mittig in den Bogen setzen
+magick images/logo_sarah_master.png -background white -alpha remove -alpha off \
+  -crop 232x232+557+314 +repage \
+  \( -size 232x232 xc:black -fill white -draw 'circle 116,116 116,3' -alpha off \) \
+  -compose CopyOpacity -composite /tmp/wheel.png
+magick images/logo_sarah_bogen.webp \( /tmp/wheel.png -resize 300x300 \) \
+  -geometry +449+446 -compose over -composite /tmp/signet-master.png
+
+# 2. App-Assets (die _hell-Variante tauscht Schwarz/Weiß über die Zwischenfarbe
+#    Magenta – sonst frisst der zweite -opaque-Durchgang den ersten wieder auf)
+magick images/logo_sarah_master.png -trim +repage -resize 640x \
+  -quality 86 -define webp:method=6 assets/logo_sarah.webp
+magick images/logo_sarah_master.png \
+  -fuzz 16% -fill '#FF00FF' -opaque white \
+  -fuzz 22% -fill '#FDF8F0' -opaque '#231F20' \
+  -fuzz  4% -fill '#2B2434' -opaque '#FF00FF' \
+  -trim +repage -resize 640x -quality 86 -define webp:method=6 assets/logo_sarah_hell.webp
+# dieselben zwei Befehle mit /tmp/signet-master.png und -resize 320x → *_signet*.webp
+
+# 3. Icon-Master: Signet auf Creme, quadratisch gepolstert. Maskable kleiner (58 %),
+#    damit die Form innerhalb des sicheren Kreises bleibt.
+magick /tmp/signet-master.png -trim +repage -resize 800x800 -background '#FDF8F0' \
+  -gravity center -extent 1024x1024 -alpha remove -alpha off /tmp/icon-master.png
+magick /tmp/signet-master.png -trim +repage -resize 600x600 -background '#FDF8F0' \
+  -gravity center -extent 1024x1024 -alpha remove -alpha off /tmp/icon-maskable.png
+```
+
+Daraus die Icons: `web/favicon.png` (64), `web/icons/Icon-{192,512}.png` und
+`Icon-maskable-{192,512}.png`, `android/app/src/main/res/mipmap-*/ic_launcher.png`
+(48/72/96/144/192) sowie alle `ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-*.png`
+in ihren jeweiligen Kantenlängen. **iOS-Icons müssen deckend sein** – dort zusätzlich
+`-alpha remove -alpha off`, ein Alphakanal führt zur Ablehnung im App Store. Das Icon
+ist bewusst das Signet ohne Schriftzug: auf dem Homescreen bliebe der Text unlesbar.
+`manifest.json` trägt denselben Creme-Ton als `background_color`, sonst blitzt beim
+PWA-Start ein weißer Rand um das Icon.
+
 ## iOS bauen ohne Mac
 Android + gesamte Logik laufen lokal. iOS-Builds brauchen die macOS-Toolchain → **nicht lokal
 versuchen**, sondern **Cloud-CI**: Codemagic (Flutter-nah, Gratis-Kontingent) oder GitHub Actions

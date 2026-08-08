@@ -177,7 +177,13 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
             left: 16,
             child: Opacity(
               opacity: 0.9,
-              child: FahrSignalLogo(size: 26, wheelColor: fg, dotColor: bg),
+              // Helle Variante überall außer auf Gelb ("achtung") – dort ist
+              // der Grund hell und die Schrift dunkel.
+              child: SarahLogo(
+                size: 34,
+                signet: true,
+                onDark: fg.computeLuminance() > 0.5,
+              ),
             ),
           ),
           // Dezenter Ausgang oben rechts – klein & mit Rückfrage, damit die

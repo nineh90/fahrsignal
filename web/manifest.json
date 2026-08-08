@@ -3,7 +3,7 @@
     "short_name": "FahrSignal",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFFFFF",
+    "background_color": "#FDF8F0",
     "theme_color": "#0E1E38",
     "description": "Visuelle Fahranweisungen für gehörlose Fahrschüler:innen – Verstehen verbindet.",
     "orientation": "portrait-primary",

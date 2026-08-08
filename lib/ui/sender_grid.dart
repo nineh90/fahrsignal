@@ -81,11 +81,9 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const FahrSignalLogo(
-              size: 24,
-              wheelColor: Colors.white,
-              dotColor: kBrandNavy,
-            ),
+            // Navy-Header ⇒ immer die helle Variante, sonst verschwindet das
+            // Lenkrad im dunklen Grund.
+            const SarahLogo(size: 30, signet: true, onDark: true),
             const SizedBox(width: 10),
             const Text('Senden'),
             const SizedBox(width: 10),

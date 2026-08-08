@@ -55,7 +55,7 @@ class _StartScreenState extends ConsumerState<StartScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const FahrSignalLogo(size: 92),
+                  const SarahLogo(size: 132),
                   const SizedBox(height: 14),
                   const FahrSignalWordmark(fontSize: 34),
                   const SizedBox(height: 10),

@@ -100,7 +100,50 @@ ThemeData fahrSignalTheme(Brightness brightness) {
   );
 }
 
-/// Das FahrSignal-Logo (Lenkrad im Regenbogen-Ring) als Vektor.
+/// Logo der Fahrlehrerin – seit 08.08.2026 die Marke der App.
+///
+/// [signet] zeigt nur Bogen + Lenkrad **ohne Schriftzug**. Das ist unter rund
+/// 60 px Pflicht: klein skaliert wäre „Fahrlehrerin Sarah" nur Matsch.
+/// [onDark] wählt die helle Variante (Schrift creme, Lenkrad invertiert) –
+/// ohne Angabe entscheidet die Theme-Helligkeit. Auf dem Empfängerschirm muss
+/// der Aufrufer sie setzen, dort bestimmt die Dringlichkeitsfarbe den Grund.
+class SarahLogo extends StatelessWidget {
+  /// Höhe in Logischen Pixeln; die Breite folgt dem Seitenverhältnis.
+  final double size;
+  final bool signet;
+  final bool? onDark;
+
+  const SarahLogo({
+    super.key,
+    required this.size,
+    this.signet = false,
+    this.onDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = onDark ?? (Theme.of(context).brightness == Brightness.dark);
+    final asset = switch ((signet, dark)) {
+      (true, true) => 'assets/logo_sarah_signet_hell.webp',
+      (true, false) => 'assets/logo_sarah_signet.webp',
+      (false, true) => 'assets/logo_sarah_hell.webp',
+      (false, false) => 'assets/logo_sarah.webp',
+    };
+    return Image.asset(
+      asset,
+      height: size,
+      fit: BoxFit.contain,
+      // Das Logo trägt den Namen selbst – für Screenreader benannt, damit die
+      // Empfängeransicht nicht mit einem unbeschrifteten Bild beginnt.
+      semanticLabel: 'Fahrlehrerin Sarah',
+    );
+  }
+}
+
+/// Das frühere FahrSignal-Logo (Lenkrad im Regenbogen-Ring) als Vektor.
+/// **Zurzeit nirgends eingebunden** – ersetzt durch [SarahLogo], aber
+/// aufgehoben: kann als neutrale Marke wieder gebraucht werden, wenn die App
+/// über Sarahs Fahrschule hinaus geht.
 /// Die Lenkrad-Farbe passt sich dem Theme an (Navy hell / Weiß dunkel),
 /// kann aber per [wheelColor]/[dotColor] überschrieben werden.
 class FahrSignalLogo extends StatelessWidget {
