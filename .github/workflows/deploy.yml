@@ -1,0 +1,78 @@
+# Baut die Web-App und liefert sie auf den VPS aus, sobald etwas auf main landet.
+#
+# Aufbau wie der Deploy von kein-einzelfall (gleiche Secret-Namen, gleiche
+# Sperre gegen parallele Laeufe) - mit einem Unterschied: dort baut der Server
+# selbst, hier baut der Runner. Flutter auf den zwei Kernen des VPS waere pro
+# Push mehrere Minuten, und das Builder-Image wiegt Gigabytes. Auf den Server
+# geht deshalb nur das fertige build/web als Tarball.
+#
+# Der hinterlegte Schluessel kann auf dem Server ausschliesslich
+# /docker/fahrsignal/deploy.sh ausfuehren (erzwungener Befehl in
+# authorized_keys) - eine Shell bekommt man damit nicht.
+name: FahrSignal deployen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Zwei gleichzeitige Deploys wuerden sich beim Schwenken des Symlinks in die
+# Quere kommen.
+concurrency:
+  group: fahrsignal-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Flutter einrichten
+        uses: subosito/flutter-action@v2
+        with:
+          # WICHTIG: exakt die verifizierte Version pinnen, nicht "stable".
+          # Ein frisches stable kann eine neuere Engine ziehen, deren Web-Build
+          # bei uns schon einmal einen weissen Bildschirm erzeugt hat.
+          flutter-version: '3.44.3'
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Web-App bauen
+        # Die beiden Werte kamen bisher aus den Vercel-Env-Vars. Sie landen im
+        # ausgelieferten Bundle - das ist so vorgesehen, der Supabase-Key ist
+        # ein publishable Key. main.dart trimmt sie zusaetzlich, weil ein
+        # angehaengter Zeilenumbruch Supabases Uri.parse sprengt.
+        run: |
+          flutter build web --release \
+            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --dart-define=SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}"
+
+      - name: Grosse Dateien vorkomprimieren
+        # nginx liefert diese .gz per gzip_static aus: beste Kompressionsrate,
+        # ohne dafuer auf dem VPS CPU zu verbrennen. Ohne diesen Schritt gingen
+        # main.dart.js (2,8 MB) und canvaskit.wasm (6,9 MB) ungepackt ueber
+        # Sarahs Mobilfunkverbindung - Vercels CDN hatte das vorher unsichtbar
+        # erledigt.
+        run: |
+          find build/web -type f -size +1k \
+            \( -name '*.js' -o -name '*.wasm' -o -name '*.json' \
+               -o -name '*.css' -o -name '*.svg' \) \
+            -exec gzip -9 -k {} +
+          du -sh build/web
+
+      - name: SSH vorbereiten
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Ausliefern
+        # Das "true" ist Attrappe: der erzwungene Befehl auf dem Server laeuft
+        # ohnehin und liest den Tarball von stdin.
+        run: |
+          tar czf - -C build/web . | ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes \
+            "root@${{ secrets.VPS_HOST }}" true
