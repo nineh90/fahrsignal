@@ -40,18 +40,17 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=n8n_default"
 
-      # TESTPHASE DES UMZUGS: vorerst NUR der Wegwerf-Hostname. Die echte
-      # Adresse zeigt noch auf Vercel - stuende sie hier schon, wuerde Traefik
-      # sofort ein Zertifikat dafuer anfordern, jedes Mal scheitern (die
-      # Validierung landet ja bei Vercel) und nach fuenf Fehlversuchen die
-      # Let's-Encrypt-Sperre fuer eine Stunde ausloesen. Genau dann, wenn wir
-      # das Zertifikat braeuchten.
+      # Hier darf nur stehen, was im DNS auch auf diesen Server zeigt.
+      # Traefik fordert fuer jeden Hostnamen in dieser Regel sofort ein
+      # Zertifikat an; zeigt der Name woanders hin oder gar nirgends,
+      # scheitert die Validierung - und nach fuenf Fehlversuchen sperrt
+      # Let's Encrypt den Namen fuer eine Stunde. Genau dann, wenn man das
+      # Zertifikat braucht. Beim Umzug am 11.08.2026 ist uns das mit dem
+      # Test-Hostnamen dreimal passiert.
       #
-      # ZUM SCHWENK: DNS umstellen, dann diese Zeile ersetzen durch
-      #   ...rule=Host(`fahrsignal.fahrlehrerinsarah.de`) || Host(`fahrsignal-neu.fahrlehrerinsarah.de`)
-      # und docker compose up -d. Der Testhostname darf bleiben, er ist
-      # genauso passwortgeschuetzt und dient als Vorschau fuer den naechsten Umbau.
-      - "traefik.http.routers.fahrsignal.rule=Host(`fahrsignal-neu.fahrlehrerinsarah.de`)"
+      # Also: erst DNS umstellen und die autoritativen Nameserver fragen,
+      # DANN den Namen hier eintragen.
+      - "traefik.http.routers.fahrsignal.rule=Host(`fahrsignal.fahrlehrerinsarah.de`)"
       - "traefik.http.routers.fahrsignal.entrypoints=web,websecure"
       - "traefik.http.routers.fahrsignal.tls=true"
       - "traefik.http.routers.fahrsignal.tls.certresolver=mytlschallenge"
