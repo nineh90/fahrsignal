@@ -282,6 +282,67 @@ ist bewusst das Signet ohne Schriftzug: auf dem Homescreen bliebe der Text unles
 `manifest.json` trägt denselben Creme-Ton als `background_color`, sonst blitzt beim
 PWA-Start ein weißer Rand um das Icon.
 
+## Hosting & Deploy (Web-Prototyp)
+
+Die Web-App läuft unter `https://fahrsignal.fahrlehrerinsarah.de` auf **unserem eigenen
+VPS** `187.124.178.193` (`srv1535638.hstgr.cloud`) — derselben Kiste wie
+`fahrlehrerinsarah.de` und `kein-einzelfall.nils-digital.de`. Vorher lag sie bei Vercel;
+umgezogen am 11.08.2026, weil Sarah die App bis zur Abnahme passwortgeschützt haben
+wollte und der Schutz auf dem eigenen Server hingehört, nicht in die App.
+
+**Push auf `main` ist der Deploy.** `.github/workflows/deploy.yml` baut im GitHub-Runner
+und schiebt das Ergebnis auf den Server:
+
+```
+git push main
+  └─ Flutter 3.44.3 (exakt gepinnt) → flutter build web → .js/.wasm vorkomprimieren
+       └─ tar | ssh root@VPS         → /docker/fahrsignal/deploy.sh
+            └─ site/releases/<stand>/ entpacken, Symlink site/www atomar schwenken
+```
+
+Anders als die PHP-Nachbarn, die auf dem Server selbst bauen: Flutter auf zwei Kernen
+wäre pro Push mehrere Minuten, das Builder-Image wiegt Gigabytes. Der Server bekommt
+nur fertige Dateien. Der dafür hinterlegte Schlüssel darf auf dem Server ausschließlich
+`deploy.sh` ausführen (erzwungener Befehl in `authorized_keys`) — eine Shell bekommt man
+damit nicht.
+
+| Wo | Was |
+|---|---|
+| `deploy/docker-compose.yml` | nginx-Container + Traefik-Route, hängt am Netz `n8n_default` |
+| `deploy/nginx.conf` | Auslieferung, `gzip_static`, Cache-Regeln |
+| `deploy/deploy.sh` | liegt auf dem Server als `/docker/fahrsignal/deploy.sh` |
+| GitHub Secrets | `SUPABASE_URL`, `SUPABASE_KEY`, `VPS_HOST`, `VPS_SSH_KEY` |
+| `/docker/fahrsignal/deploy/.env` | `FS_AUTH` (bcrypt) — **nicht** im Repo, das ist öffentlich |
+
+Was beim Anfassen leicht schiefgeht:
+
+- **Der bcrypt-Hash in `.env` muss in einfachen Anführungszeichen stehen.** Sonst frisst
+  die Variablen-Ersetzung von docker compose die Dollarzeichen (`$2y$10$…` → `$2y$10…`),
+  der Hash ist still kaputt und *jedes* Passwort wird abgelehnt.
+- **Der Volume-Mount geht auf `site/`, nicht auf `site/www`.** Docker löst einen Symlink
+  beim Mounten einmal auf; zeigte der Mount direkt auf `www`, liefe der Container nach
+  dem nächsten Deploy weiter gegen den alten Stand. Aus demselben Grund ist das
+  Symlink-Ziel in `deploy.sh` **relativ** — ein absoluter Pfad existiert im Container nicht.
+- **Kompression ist hier nicht Feinschliff.** `main.dart.js` wiegt 2,8 MB, `canvaskit.wasm`
+  6,9 MB. Vercels CDN hat das unsichtbar erledigt; nginx muss es gesagt bekommen, und die
+  `.gz` entstehen im CI.
+- **Flutter-Version gepinnt lassen.** Ein frisches „stable" hat schon einmal einen weißen
+  Bildschirm erzeugt.
+- Ein Release liegt bei ~25 MB, die letzten fünf bleiben liegen. Zurückschwenken von Hand:
+  `cd /docker/fahrsignal/site && ln -sfn releases/<stand> www.neu && mv -T www.neu www`
+
+### Passwortschutz — zur Abnahme entfernen
+
+Der Schutz sitzt als Traefik-Middleware **vor** dem Container: ohne Anmeldung wird kein
+Byte ausgeliefert, auch keine einzelne Asset-Datei. Genau ein Zugang für alle Tester.
+Middlewares wirken nur auf den Router, der sie nennt — `fahrlehrerinsarah.de` bleibt
+davon unberührt und öffentlich.
+
+**Zum Livegang** in `deploy/docker-compose.yml` die beiden Middleware-Zeilen
+(`fahrsignal-auth`, `fahrsignal-noindex`) und ihren Eintrag in
+`routers.fahrsignal.middlewares` entfernen, dann auf dem Server
+`cd /docker/fahrsignal/deploy && docker compose up -d`.
+
 ## iOS bauen ohne Mac
 Android + gesamte Logik laufen lokal. iOS-Builds brauchen die macOS-Toolchain → **nicht lokal
 versuchen**, sondern **Cloud-CI**: Codemagic (Flutter-nah, Gratis-Kontingent) oder GitHub Actions
