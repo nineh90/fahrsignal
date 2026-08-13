@@ -209,6 +209,21 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
   }
 }
 
+/// Schriftgröße des großen Worts, gestaffelt nach seiner Länge.
+///
+/// Ein kurzes „LINKS" soll den Schirm füllen; „Blinker – Innenspiegel –
+/// Außenspiegel – Schulterblick" muss umbrechen dürfen und wird dafür kleiner
+/// gesetzt. Feste Stufen statt Auto-Skalierung: so ist dasselbe Kommando
+/// immer gleich groß, egal auf welchem Gerät.
+double _labelSize(String label, {required bool combo}) {
+  if (combo) return 52;
+  final n = label.length;
+  if (n <= 12) return 68;
+  if (n <= 22) return 54;
+  if (n <= 34) return 44;
+  return 38;
+}
+
 class _CommandDisplay extends StatelessWidget {
   final DriveCommand? cmd;
   final Color fg;
@@ -278,23 +293,24 @@ class _CommandDisplay extends StatelessWidget {
       children: [
         visual,
         const SizedBox(height: 20),
-        // Nur das **Wort** darf schrumpfen, wenn es lang ist – nicht das
-        // Zeichen mit. Ohne diese eigene Begrenzung zog ein „SCHULTERBLICK"
-        // den umgebenden FittedBox zusammen und das Schild wurde nebenbei
-        // halb so groß wie bei „LINKS": gleiche Kachel, zwei Größen.
+        // Nur das **Wort** passt sich an, nicht das Zeichen: ohne eigene
+        // Begrenzung zog ein langes Label den umgebenden FittedBox zusammen
+        // und das Schild wurde nebenbei halb so groß wie bei „LINKS" –
+        // gleiche Anzeige, zwei Größen. Der Text bricht in fester Breite um
+        // und wird dafür gestaffelt kleiner gesetzt.
         SizedBox(
           width: MediaQuery.sizeOf(context).width - 40,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              displayLabel(c).toUpperCase(),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: fg,
-                fontSize: secondaries.isEmpty ? 68 : 52,
-                fontWeight: FontWeight.bold,
-                height: 1.03,
+          child: Text(
+            displayLabel(c).toUpperCase(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: fg,
+              fontSize: _labelSize(
+                displayLabel(c),
+                combo: secondaries.isNotEmpty,
               ),
+              fontWeight: FontWeight.bold,
+              height: 1.03,
             ),
           ),
         ),

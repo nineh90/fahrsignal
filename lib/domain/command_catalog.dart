@@ -492,7 +492,7 @@ const List<CommandDef> kCommandCatalog = [
   // --- Hinweise ---
   CommandDef(
     'reihenfolge',
-    'Spiegel – Blinker – Schulterblick',
+    'Blinker – Innenspiegel – Außenspiegel – Schulterblick',
     Icons.format_list_numbered,
     Urgency.info,
     CommandCategory.hinweis,

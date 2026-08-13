@@ -177,6 +177,10 @@ const Map<String, List<String>> kCommandPhrases = {
   // --- Hinweise ---
   'reihenfolge': [
     'reihenfolge',
+    // Die Merkkette selbst, in der Fassung der Fahrschule – und in der alten
+    // Kurzform, die im Auto weiter gesprochen wird.
+    'blinker innenspiegel aussenspiegel schulterblick',
+    'blinker spiegel schulterblick',
     'spiegel blinker schulterblick',
     'in der reihenfolge',
   ],

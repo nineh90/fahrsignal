@@ -159,7 +159,7 @@ void main() {
     expect(find.text('Reihenfolge'), findsOneWidget);
     expect(
       commandByKey('reihenfolge')!.label,
-      'Spiegel – Blinker – Schulterblick',
+      'Blinker – Innenspiegel – Außenspiegel – Schulterblick',
     );
   });
 }
