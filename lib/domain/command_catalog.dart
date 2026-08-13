@@ -112,8 +112,10 @@ extension CommandCategoryX on CommandCategory {
   /// Regenbogen-Farbe der Kategorie (farbliche Trennung im Dashboard).
   Color get color => switch (this) {
     CommandCategory.richtung => const Color(0xFF1E88E5), // Blau
-    CommandCategory.tempo => const Color(0xFFFB8C00), // Orange
-    CommandCategory.hinweis => const Color(0xFF8E24AA), // Violett
+    // Rot, aber heller als das dringend-Rot (0xFFC62828) – sonst verschwände
+    // der Urgency-Punkt auf „Bremsen" in der eigenen Kachelfläche.
+    CommandCategory.tempo => const Color(0xFFE53935), // Rot
+    CommandCategory.hinweis => const Color(0xFF2E9E44), // Grün
     CommandCategory.grundfahraufgabe => const Color(0xFF00897B), // Türkis
     CommandCategory.feedback => const Color(0xFF2E9E44), // Grün
     CommandCategory.abfahrt => const Color(0xFF2E7D32), // Grün
