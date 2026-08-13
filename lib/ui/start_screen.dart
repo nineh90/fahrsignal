@@ -55,7 +55,9 @@ class _StartScreenState extends ConsumerState<StartScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SarahLogo(size: 132),
+                  // Signet wie im Sender-Header: der Schriftzug „Fahrlehrerin
+                  // Sarah" stünde hier doppelt zur Wortmarke direkt darunter.
+                  const SarahLogo(size: 132, signet: true),
                   const SizedBox(height: 14),
                   const FahrSignalWordmark(fontSize: 34),
                   const SizedBox(height: 10),

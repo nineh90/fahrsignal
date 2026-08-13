@@ -218,9 +218,11 @@ ausführliche Herleitung:
 
 Regeln – kommen aus dem Logo selbst, nicht aus Geschmack:
 
-- **Unter rund 60 px immer das Signet.** Das Logo trägt seinen Text mit; klein skaliert
-  wäre „Fahrlehrerin Sarah" nur Matsch. Deshalb Sender-Header und Empfängerschirm mit
-  `SarahLogo(signet: true)`, der Startbildschirm mit dem vollen Logo.
+- **Überall das Signet** (`SarahLogo(signet: true)`) – Sender-Header, Empfängerschirm
+  und seit dem 13.08.2026 auch der Startbildschirm. Klein skaliert wäre der mitgetragene
+  Schriftzug ohnehin Matsch, und auf dem Startbildschirm stünde er doppelt: direkt
+  darunter sitzt die Wortmarke. Das volle Logo bleibt als Asset für Aushänge und
+  Druckstücke, ist in der App aber nirgends mehr eingebunden.
 - **Auf dunklem Grund die `_hell`-Variante** (Schrift creme, Lenkrad invertiert), sonst
   verschwindet „Fahrlehrerin" im Grund. `SarahLogo` wählt sie nach der Theme-Helligkeit;
   auf dem Empfängerschirm bestimmt aber die Dringlichkeitsfarbe den Grund → dort setzt
