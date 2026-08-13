@@ -1,0 +1,81 @@
+# fahrsignal.fahrlehrerinsarah.de
+#
+# Hängt sich an den vorhandenen Traefik des n8n-Stacks (Netz n8n_default) –
+# genauso wie fahrlehrerin-sarah und kein-einzelfall. Es wird KEIN Port
+# veröffentlicht, Traefik ist der einzige Weg hinein. An Traefik selbst wird
+# nichts geändert: der Docker-Provider läuft mit exposedbydefault=false,
+# jeder Container bringt seine eigene Route als Label mit. Die Nachbar-
+# projekte merken von diesem hier nichts.
+#
+# Aufruf auf dem Server (aus /docker/fahrsignal/deploy):
+#   docker compose up -d
+name: fahrsignal
+
+services:
+  app:
+    # Reines Ausliefern statischer Dateien – anders als bei den Nachbarn
+    # braucht es hier kein PHP und kein eigenes Image. Der Flutter-Build
+    # entsteht im GitHub-Runner, hier kommt nur das Ergebnis an.
+    image: nginx:alpine
+    container_name: fahrsignal
+    restart: unless-stopped
+
+    volumes:
+      # Eingehängt wird site/ als Ganzes, nicht site/www direkt.
+      # Docker löst einen Symlink beim Mounten genau einmal auf: zeigte der
+      # Mount auf www, liefe der Container nach dem nächsten Deploy weiter
+      # gegen den alten Release. So sieht er den Symlink als Symlink und
+      # nginx folgt ihm bei jedem Request neu.
+      #
+      # site/ enthält ausschließlich Auslieferbares. deploy/ mit der .env –
+      # und damit der Passwort-Hash – liegt bewusst daneben und ist für
+      # diesen Container unsichtbar.
+      - ../site:/srv:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+    networks:
+      - n8n_default
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=n8n_default"
+
+      # Hier darf nur stehen, was im DNS auch auf diesen Server zeigt.
+      # Traefik fordert fuer jeden Hostnamen in dieser Regel sofort ein
+      # Zertifikat an; zeigt der Name woanders hin oder gar nirgends,
+      # scheitert die Validierung - und nach fuenf Fehlversuchen sperrt
+      # Let's Encrypt den Namen fuer eine Stunde. Genau dann, wenn man das
+      # Zertifikat braucht. Beim Umzug am 11.08.2026 ist uns das mit dem
+      # Test-Hostnamen dreimal passiert.
+      #
+      # Also: erst DNS umstellen und die autoritativen Nameserver fragen,
+      # DANN den Namen hier eintragen.
+      - "traefik.http.routers.fahrsignal.rule=Host(`fahrsignal.fahrlehrerinsarah.de`)"
+      - "traefik.http.routers.fahrsignal.entrypoints=web,websecure"
+      - "traefik.http.routers.fahrsignal.tls=true"
+      - "traefik.http.routers.fahrsignal.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.fahrsignal.loadbalancer.server.port=80"
+
+      # Passwortschutz für die Testphase. Die Schranke sitzt im Reverse Proxy,
+      # greift also VOR diesem Container – ohne Anmeldung wird kein Byte der
+      # App ausgeliefert, auch keine einzelne Asset-Datei.
+      #
+      # Der bcrypt-Hash kommt aus deploy/.env auf dem Server und steht bewusst
+      # nicht hier: dieses Repo ist öffentlich.
+      #
+      # Die Namen sind ausgeschrieben und nicht auf "fs-" gekürzt, damit sie
+      # sich nie mit den "fls-"-Middlewares von fahrlehrerinsarah.de
+      # verwechseln lassen. Middlewares wirken in Traefik ausschließlich auf
+      # den Router, der sie in seiner middlewares-Zeile nennt – Sarahs Seite
+      # bleibt davon unberührt und öffentlich erreichbar.
+      #
+      # ZUR ABNAHME: diese beiden Middleware-Zeilen und ihren Eintrag in
+      # routers.fahrsignal.middlewares entfernen, dann docker compose up -d.
+      - "traefik.http.middlewares.fahrsignal-auth.basicauth.users=${FS_AUTH:?deploy/.env fehlt oder FS_AUTH ist leer}"
+      - "traefik.http.middlewares.fahrsignal-noindex.headers.customresponseheaders.X-Robots-Tag=noindex, nofollow"
+
+      - "traefik.http.routers.fahrsignal.middlewares=fahrsignal-auth@docker,fahrsignal-noindex@docker"
+
+networks:
+  n8n_default:
+    external: true
