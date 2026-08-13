@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../domain/command_catalog.dart';
 
 // Amtsnahe Signalfarben.
@@ -6,36 +7,96 @@ const _red = Color(0xFFC1121F);
 const _black = Color(0xFF111417);
 const _grey = Color(0xFF6B6F73);
 
-/// Rendert ein **echtes Verkehrszeichen** (korrekte Form/Farbe) für ein
-/// Kommando mit [SignShape]. Wird identisch beim Fahrlehrer (Kachel) und
-/// beim Fahrschüler (Anzeige) verwendet.
+/// Rendert das **amtliche Verkehrszeichen** eines Kommandos. Wird identisch
+/// beim Fahrlehrer (Kachel) und beim Fahrschüler (Anzeige) verwendet.
 ///
-/// Der Katalog kennt nur noch Tempo-Zeichen: das runde Verbotszeichen mit
-/// Zahl (VZ 274) und die Aufhebung (VZ 282). Die früheren Gefahrzeichen sind
-/// mit der Kategorie „Gefahr" entfallen.
+/// Zwei Wege, beide vom Katalog gesteuert:
+/// - `def.vz` → das amtliche Bild aus `assets/signs/` (Richtungspfeile,
+///   Kreisverkehr, Ampel, STOP, Parken …).
+/// - [SignShape] → gezeichnet, weil die Aufschrift variabel ist: das runde
+///   Verbotszeichen mit Zahl (VZ 274) und die Aufhebung (VZ 282).
 class TrafficSign extends StatelessWidget {
   final CommandDef def;
+
+  /// **Höhe** des Zeichens. Breite folgt der Form (siehe [_aspect]).
   final double size;
   const TrafficSign({super.key, required this.def, required this.size});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(width: size, height: size, child: _sign(def, size));
+    return SizedBox(
+      width: size * _aspect(def.vz),
+      height: size,
+      child: _sign(def, size),
+    );
   }
 }
 
-Widget _sign(CommandDef def, double s) => switch (def.sign) {
-  SignShape.ende => CustomPaint(
-    painter: _EndLimitPainter(),
-    size: Size.square(s),
-  ),
-  // Aufschrift kommt aus dem Katalog, damit ein neues Limit dort mit einer
-  // Zeile ergänzt werden kann.
-  _ => _frame(
-    _RingPainter(),
-    _fitted(s, 0.24, Text(def.signText, style: _limitText)),
-  ),
+/// Seitenverhältnis (Breite/Höhe) der Zeichen, die nicht quadratisch sind.
+/// Der verkehrsberuhigte Bereich ist ein Querformat-Schild; in eine
+/// quadratische Box gezwängt schrumpfte es auf zwei Drittel und wäre auf der
+/// Kachel nicht mehr zu entziffern.
+double _aspect(String vz) => switch (vz) {
+  '325-1' => 732 / 489,
+  _ => 1,
 };
+
+Widget _sign(CommandDef def, double s) {
+  if (def.vz.isNotEmpty) return _Plate(asset: def.vzAsset);
+  return switch (def.sign) {
+    SignShape.ende => CustomPaint(
+      painter: _EndLimitPainter(),
+      size: Size.square(s),
+    ),
+    // Aufschrift kommt aus dem Katalog, damit ein neues Limit dort mit einer
+    // Zeile ergänzt werden kann.
+    _ => _frame(
+      _RingPainter(),
+      _fitted(s, 0.24, Text(def.signText, style: _limitText)),
+    ),
+  };
+}
+
+/// Das Zeichen mit einem schmalen weißen Saum **in seiner eigenen Form**.
+///
+/// Ohne Absetzung verschwände VZ 209 (blauer Kreis) auf der blauen
+/// Richtungs-Kachel und erst recht auf dem blauen Empfängerschirm – die
+/// amtlichen Zeichen sind dafür gemacht, gegen Himmel und Landschaft zu
+/// stehen, nicht gegen eine Fläche ihrer eigenen Farbe. Am Straßenrand
+/// übernimmt das der weiße Rand des Schildblechs.
+///
+/// Der Saum entsteht, indem dasselbe SVG einmal etwas größer und vollflächig
+/// weiß dahintergelegt wird. Das folgt jeder Form von selbst – Kreis, Dreieck,
+/// Raute, Achteck, Rechteck – statt sie in ein weißes Kästchen zu setzen, das
+/// wie ein aufgeklebter Sticker aussieht.
+class _Plate extends StatelessWidget {
+  final String asset;
+  const _Plate({required this.asset});
+
+  /// Wie weit die Silhouette übersteht. 8 % ergeben bei der 34-px-Kachel noch
+  /// einen sichtbaren Saum, ohne dass die Form beim Empfänger aufgedunsen
+  /// wirkt.
+  static const double _bleed = 1.08;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      fit: StackFit.expand,
+      children: [
+        Transform.scale(
+          scale: _bleed,
+          child: SvgPicture.asset(
+            asset,
+            fit: BoxFit.contain,
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+          ),
+        ),
+        SvgPicture.asset(asset, fit: BoxFit.contain),
+      ],
+    );
+  }
+}
 
 Widget _frame(CustomPainter painter, Widget content) => Stack(
   alignment: Alignment.center,

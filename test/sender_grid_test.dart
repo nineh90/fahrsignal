@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fahrsignal/domain/command_catalog.dart';
 import 'package:fahrsignal/ui/sender_grid.dart';
+import 'package:fahrsignal/ui/traffic_signs.dart';
 
 void main() {
   // Handy hochkant – der engste Fall, den die Fahrlehrperson im Auto hat.
@@ -94,21 +95,47 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // „Links" ist der kritische Fall: kurzes Wort, schmale Column. Genau da
-    // klebte der Inhalt am linken Kachelrand, solange der Stack ihn oben
-    // links ausrichtete.
+    // Kurzes Wort, schmale Column: genau da klebte der Inhalt am linken
+    // Kachelrand, solange der Stack ihn oben links ausrichtete. „Einordnen"
+    // trägt ein Icon – „Links" zeigt inzwischen ein Verkehrszeichen.
     final tile = tester.getRect(
       find
-          .ancestor(of: find.text('Links'), matching: find.byType(InkWell))
+          .ancestor(of: find.text('Einordnen'), matching: find.byType(InkWell))
           .first,
     );
     expect(
-      tester.getRect(find.text('Links')).center.dx,
+      tester.getRect(find.text('Einordnen')).center.dx,
       closeTo(tile.center.dx, 0.5),
     );
     expect(
-      tester.getRect(find.byIcon(Icons.turn_left).first).center.dx,
+      tester.getRect(find.byIcon(Icons.merge).first).center.dx,
       closeTo(tile.center.dx, 0.5),
+    );
+  });
+
+  testWidgets('Kachel mit Verkehrszeichen zeigt das Zeichen statt des Icons', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: SenderGrid())),
+    );
+    await tester.pumpAndSettle();
+
+    final tile = find.ancestor(
+      of: find.text('Links'),
+      matching: find.byType(InkWell),
+    );
+    expect(
+      find.descendant(of: tile, matching: find.byType(TrafficSign)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: tile, matching: find.byIcon(Icons.turn_left)),
+      findsNothing,
     );
   });
 

@@ -72,7 +72,6 @@ const Map<String, List<String>> kCommandPhrases = {
     'bieg rechts ab',
     'rechts rein',
   ],
-  'wenden': ['wenden', 'umdrehen', 'wende', 'kehrt machen'],
   'einordnen': ['einordnen', 'ordne dich ein', 'spur wechseln', 'einfaedeln'],
   'einordnen_links': [
     'links einordnen',
@@ -207,6 +206,23 @@ const Map<String, List<String>> kCommandPhrases = {
     'nach hinten sehen',
     'blick nach hinten',
     'nach hinten',
+  ],
+  // „vorfahrt beachten" bewusst bei *gewähren*: wer das sagt, meint immer den
+  // anderen, nie sich selbst. Die kurze Form „vorfahrt" bleibt draußen – sie
+  // steckt in beiden Kommandos und würde reihum das falsche treffen.
+  'vorfahrt_gewaehren': [
+    'vorfahrt gewaehren',
+    'vorfahrt beachten',
+    'vorfahrt achten',
+    'der hat vorfahrt',
+    'die haben vorfahrt',
+    'vorfahrt lassen',
+  ],
+  'vorfahrtstrasse': [
+    'vorfahrtstrasse',
+    'vorfahrt strasse',
+    'du hast vorfahrt',
+    'wir haben vorfahrt',
   ],
   'hindernis': [
     'hindernis',

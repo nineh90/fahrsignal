@@ -99,7 +99,7 @@ Die Grenze steht in `command_catalog.dart`, nicht in der UI:
 |---|---|
 | `kExamHiddenCategories` | ganze Kategorien: Hinweise, Lob & Kritik, Coaching |
 | `kExamHiddenKeys` | Einzelnes in erlaubten Kategorien: langsamer/schneller, alle Tempovorgaben |
-| `kExamSafetyKeys` | **überstimmt alles**: Bremsen, Anhalten, STOPP |
+| `kExamSafetyKeys` | **überstimmt alles**: Bremsen, Anhalten, Stop |
 
 Bewusst ganze Kategorien statt Einzelkeys: eine neue „Hinweis"-Kachel ist per Definition
 wieder eine Hilfestellung und soll ohne Codeänderung mitgesperrt sein.
@@ -108,7 +108,7 @@ Was daran nicht verhandelbar ist:
 
 - **Die Notkommandos bleiben.** Die Fahrlehrperson trägt auch während der Prüfung die
   Verantwortung im Auto. Deshalb steht „Hinweise" im Prüfungsmodus weiter da – mit genau
-  zwei Kacheln (Anhalten, STOPP).
+  zwei Kacheln (Anhalten, Stop).
 - **Die Sprachleiste hat dieselbe Sperre.** Sie erreicht den Katalog an den Kacheln vorbei;
   ohne `commandAllowedInExam` in `_send` wäre der Modus reine Kosmetik. Gemischte Sätze
   („links und Schulterblick") gehen **ganz** nicht raus, statt still beschnitten zu werden –
@@ -237,6 +237,66 @@ class _Receiver extends StatelessWidget {
 Start: `flutter run -d linux -t lib/dev_harness.dart` → links „LINKS senden" tippen, rechts
 erscheint sofort das Kommando. Von hier aus die echten `ui/`-Widgets, Urgency-Farben und den
 `HybridTransport` ausbauen.
+
+## Verkehrszeichen
+
+Rückmeldung aus der Fahrschule (13.08.2026): **echte Straßenschilder statt Piktogrammen.**
+Wo ein Kommando einem amtlichen Zeichen entspricht, zeigen Sender-Kachel und
+Empfängerschirm dieses Zeichen – dieselbe Bildsprache, die am Straßenrand steht, ist
+ohne Sprache am schnellsten zu erfassen.
+
+Die Dateien in `assets/signs/` sind die amtlichen Zeichen von Wikimedia Commons;
+StVO-Zeichen sind als amtliche Werke (§ 5 UrhG) gemeinfrei, die konkreten SVGs stehen
+dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
+`sodipodi:namedview` entfernt – sonst schreibt `flutter_svg` bei jedem Aufbau
+„unhandled element" ins Log. Zusammen wiegen alle neun ~34 kB.
+
+| Kommando | Zeichen |
+|---|---|
+| Links / Rechts | VZ 211-10 / 211-20 („hier links/rechts") |
+| Geradeaus | VZ 209-30 |
+| Abbiegen links / rechts | VZ 209-10 / 209-20 – der abknickende Pfeil ist genau „abbiegen" |
+| Kreisverkehr | VZ 215 |
+| Ampel | VZ 131 |
+| Vorfahrt gewähren | VZ 205 |
+| Vorfahrtstraße | VZ 306 |
+| Halten | VZ 314 (Parken) |
+| Stop | VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft |
+| Schritttempo | VZ 325.1 – das Spielstraßen-Schild *ist* die Anweisung; eine Zahl 4–7 im Verbotszeichen steht so an keiner Straße |
+| Tempo 30/50/70/100 | VZ 274, **gezeichnet** (`SignShape.limit`) |
+| Unbegrenzt | VZ 282, gezeichnet (`SignShape.ende`) |
+
+Die Zuordnung steht als Nummer am Katalogeintrag (`vz: '209-10'` → `assets/signs/vz209-10.svg`),
+nicht in der UI. `test/traffic_sign_test.dart` hält Zuordnung und Dateien zusammen: ein
+Tippfehler in der Nummer fiele sonst erst im Auto auf, wenn die Kachel leer bleibt.
+
+Warum die Tempo-Zeichen weiter gezeichnet werden: ihre Aufschrift kommt aus dem Katalog
+(`signText`), ein neues Limit ist damit eine Zeile statt einer Datei.
+
+**Jedes Zeichen braucht eine Absetzung vom Grund** – VZ 209 (blauer Kreis) auf der
+blauen Richtungs-Kachel und erst recht auf dem blauen Empfängerschirm verschwände sonst
+ineinander. Die amtlichen Zeichen sind dafür gemacht, gegen Himmel und Landschaft zu
+stehen, nicht gegen eine Fläche ihrer eigenen Farbe; am Straßenrand übernimmt das der
+weiße Rand des Schildblechs.
+
+`_Plate` legt dafür **dasselbe SVG ein zweites Mal, 8 % größer und vollflächig weiß**
+darunter (`ColorFilter` + `BlendMode.srcIn`). Der Saum folgt damit jeder Form von selbst
+– Kreis, Dreieck, Raute, Achteck, Querformat – und braucht keine Liste, welches Zeichen
+welche Form hat. Der Vorgänger, eine weiße Platte hinter dem Zeichen, sah bei runden
+Zeichen nach aufgeklebtem Sticker aus und bei Dreieck und Raute nach weißem Kasten;
+genau das war die Rückmeldung aus der Fahrschule.
+
+Nicht jedes Zeichen ist quadratisch: VZ 325.1 ist ein Querformat-Schild. `_aspect` gibt
+das Seitenverhältnis, `size` ist deshalb die **Höhe** – ins Quadrat gezwängt schrumpfte
+das Schild auf zwei Drittel und wäre auf der Kachel nicht mehr zu entziffern.
+
+Beim Empfänger wächst das Zeichen mit der Gerätebreite (halbe kurze Kante, 150–260 px):
+es trägt mehr Details als ein Piktogramm und muss aus dem Augenwinkel lesbar sein.
+
+Ein neues Zeichen: SVG nach `assets/signs/vz<nr>.svg` (Punkt in der amtlichen Nummer wird
+zum Bindestrich: 325.1 → `vz325-1.svg`), `vz: '<nr>'` an den Katalogeintrag, Erwartung in
+`test/traffic_sign_test.dart` ergänzen, Sprechvarianten in `command_phrases.dart` – und
+nur bei nicht-quadratischer Form eine Zeile in `_aspect`.
 
 ## Logo & App-Icons
 

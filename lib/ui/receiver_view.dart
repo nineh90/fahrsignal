@@ -245,8 +245,16 @@ class _CommandDisplay extends StatelessWidget {
       return _ExplainedDisplay(def: primary, fg: fg, ask: c.ask);
     }
     final secondaries = c.keys.skip(1).map(commandByKey).nonNulls.toList();
+    // Ein Verkehrszeichen trägt mehr Details als ein Piktogramm (drei Pfeile
+    // im Kreisverkehr, die Ampel im Dreieck) und darf deshalb größer stehen –
+    // mitwachsend mit dem Gerät, aber gedeckelt, damit auf einem kleinen
+    // Handy neben dem Wort darunter noch Platz bleibt.
+    final signSize = (MediaQuery.sizeOf(context).shortestSide * 0.5).clamp(
+      150.0,
+      260.0,
+    );
     final baseVisual = primary != null && primary.isSign
-        ? TrafficSign(def: primary, size: 172)
+        ? TrafficSign(def: primary, size: signSize)
         : Icon(primary?.icon ?? Icons.info, color: fg, size: 150);
 
     // Ordnungszahl als Plakette am Symbol: „zweite Straße links" muss auf
@@ -442,7 +450,12 @@ class _SecondaryChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(def.icon, color: fg, size: 30),
+          // Auch hier das echte Zeichen: „links und dann rechts" zeigte sonst
+          // oben ein Schild und daneben einen Icon-Pfeil für dieselbe Sache.
+          if (def.isSign)
+            TrafficSign(def: def, size: 34)
+          else
+            Icon(def.icon, color: fg, size: 30),
           const SizedBox(width: 10),
           Text(
             def.label.toUpperCase(),

@@ -56,7 +56,6 @@ void main() {
         'abbiegen_links',
         'kreisverkehr',
         'ausfahrt2',
-        'wenden',
         'parken',
         'gfa_laengs',
         'gfa_bremsung',
@@ -156,7 +155,7 @@ void main() {
 
       // Anweisungen und Notkommandos bleiben erreichbar.
       expect(find.text('Links'), findsOneWidget);
-      expect(find.text('STOPP'), findsOneWidget);
+      expect(find.text('Stop'), findsOneWidget);
       expect(find.text('Bremsen'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Prüfungsmodus beenden'));

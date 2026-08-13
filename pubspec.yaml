@@ -40,6 +40,7 @@ dependencies:
   # Cloud-Realtime (Fern-/Prototyp-Weg). Nur v2-API verwendet
   # (channel/onBroadcast/sendBroadcastMessage/subscribe).
   supabase_flutter: ^2.5.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,10 @@ flutter:
     - assets/logo_sarah_hell.webp
     - assets/logo_sarah_signet.webp
     - assets/logo_sarah_signet_hell.webp
+
+  # Amtliche Verkehrszeichen als SVG (Herkunft und Zuordnung: CLAUDE.md,
+  # Abschnitt „Verkehrszeichen"). Dateiname = Nummer nach StVO-Anlage.
+    - assets/signs/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

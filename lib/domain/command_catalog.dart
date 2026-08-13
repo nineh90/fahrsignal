@@ -149,6 +149,14 @@ class CommandDef {
   /// Aufschrift im runden Zeichen („30", „4-7"). Nur für [SignShape.limit].
   final String signText;
 
+  /// Nummer des amtlichen Verkehrszeichens nach StVO-Anlage, z. B. `'209-10'`.
+  /// Leer = keines. Das Bild liegt als `assets/signs/vz<nummer>.svg`;
+  /// `test/traffic_sign_test.dart` prüft, dass es zu jeder Nummer da ist.
+  ///
+  /// Getrennt von [sign]: Tempo-Zeichen werden gezeichnet, weil die Zahl aus
+  /// dem Katalog kommt – alle anderen sind unveränderliche Bilder.
+  final String vz;
+
   /// Kurzform für die Sender-Kachel, wenn [label] dort zu lang wäre.
   /// Der Empfänger zeigt immer das volle [label].
   final String tileLabel;
@@ -166,6 +174,7 @@ class CommandDef {
     this.explanation = '',
     this.sign = SignShape.none,
     this.signText = '',
+    this.vz = '',
     this.tileLabel = '',
     this.group = '',
   });
@@ -177,7 +186,10 @@ class CommandDef {
   /// Beschriftung der Sender-Kachel.
   String get tileText => tileLabel.isEmpty ? label : tileLabel;
 
-  bool get isSign => sign != SignShape.none;
+  bool get isSign => sign != SignShape.none || vz.isNotEmpty;
+
+  /// Pfad des Zeichenbildes; leer, wenn das Zeichen gezeichnet wird.
+  String get vzAsset => vz.isEmpty ? '' : 'assets/signs/vz$vz.svg';
 }
 
 /// Ausgangskatalog. Erweiterbar; später ggf. konfigurierbar je Fahrschule.
@@ -201,6 +213,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.turn_left,
     Urgency.info,
     CommandCategory.richtung,
+    // VZ 211-10 „hier links" – der Auftrag jetzt, nicht das Abbiegen
+    vz: '211-10',
   ),
   CommandDef(
     'rechts',
@@ -208,6 +222,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.turn_right,
     Urgency.info,
     CommandCategory.richtung,
+    // VZ 211-20 „hier rechts"
+    vz: '211-20',
   ),
   CommandDef(
     'geradeaus',
@@ -215,6 +231,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.straight,
     Urgency.info,
     CommandCategory.richtung,
+    // VZ 209-30 geradeaus
+    vz: '209-30',
   ),
   CommandDef(
     'abbiegen_links',
@@ -222,6 +240,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.turn_sharp_left,
     Urgency.info,
     CommandCategory.richtung,
+    // VZ 209-10: der abknickende Pfeil ist genau „abbiegen"
+    vz: '209-10',
   ),
   CommandDef(
     'abbiegen_rechts',
@@ -229,13 +249,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.turn_sharp_right,
     Urgency.info,
     CommandCategory.richtung,
-  ),
-  CommandDef(
-    'wenden',
-    'Wenden',
-    Icons.u_turn_left,
-    Urgency.info,
-    CommandCategory.richtung,
+    // VZ 209-20
+    vz: '209-20',
   ),
   // Einordnen mit Richtung: „links einordnen" trug die Seite bisher nicht
   // mit – der Schüler las nur „EINORDNEN" und wusste nicht, wohin. Die drei
@@ -270,6 +285,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.roundabout_right,
     Urgency.info,
     CommandCategory.richtung,
+    // VZ 215 Kreisverkehr
+    vz: '215',
   ),
   CommandDef(
     'ampel',
@@ -277,6 +294,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.traffic,
     Urgency.info,
     CommandCategory.richtung,
+    // VZ 131 Lichtzeichenanlage
+    vz: '131',
   ),
   // Die drei Kreisverkehr-Ausfahrten gehören zusammen und stehen deshalb
   // per `group` immer in einer eigenen Zeile nebeneinander – sonst reißt
@@ -348,19 +367,21 @@ const List<CommandDef> kCommandCatalog = [
     Icons.local_parking,
     Urgency.info,
     CommandCategory.tempo,
+    // VZ 314 Parken
+    vz: '314',
   ),
   // Tempovorgaben als echte Verkehrszeichen – dieselbe Bildsprache, die
   // am Straßenrand steht, ist ohne Sprache am schnellsten zu erfassen.
   // `info`, nicht `achtung`: es ist eine Vorgabe, keine Gefahrenmeldung.
   CommandDef(
     't_schritt',
-    '4–7 km/h',
+    'Schritttempo',
     Icons.directions_walk,
     Urgency.info,
     CommandCategory.tempo,
-    sign: SignShape.limit,
-    signText: '4-7',
-    tileLabel: 'Schritttempo',
+    // VZ 325.1: das Spielstraßen-Schild *ist* die Anweisung „Schritttempo" –
+    // eine Zahl im Verbotszeichen (4–7 km/h) steht so an keiner Straße.
+    vz: '325-1',
   ),
   CommandDef(
     't_30',
@@ -451,6 +472,25 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.hinweis,
   ),
+  // Die beiden Vorfahrt-Kacheln tragen als Symbol genau das Zeichen, das am
+  // Straßenrand steht – als Ersatzsymbol (Sprachkombination, fehlendes Bild)
+  // die formgleichen Material-Icons: Dreieck auf der Spitze bzw. Raute.
+  CommandDef(
+    'vorfahrt_gewaehren',
+    'Vorfahrt gewähren',
+    Icons.change_history,
+    Urgency.achtung,
+    CommandCategory.hinweis,
+    vz: '205',
+  ),
+  CommandDef(
+    'vorfahrtstrasse',
+    'Vorfahrtstraße',
+    Icons.diamond,
+    Urgency.info,
+    CommandCategory.hinweis,
+    vz: '306',
+  ),
   CommandDef(
     'hindernis',
     'Hindernis',
@@ -481,10 +521,12 @@ const List<CommandDef> kCommandCatalog = [
   ),
   CommandDef(
     'stopp',
-    'STOPP',
+    'Stop',
     Icons.pan_tool,
     Urgency.dringend,
     CommandCategory.hinweis,
+    // VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft
+    vz: '206',
   ),
 
   // ===== Modus GRUNDFAHRAUFGABEN =====

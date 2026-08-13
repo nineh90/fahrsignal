@@ -13,6 +13,25 @@ void main() {
     });
   });
 
+  group('Vorfahrt', () {
+    // Die beiden liegen sprachlich dicht beieinander und dürfen sich nicht
+    // gegenseitig treffen: „der hat Vorfahrt" ist das Gegenteil von
+    // „du hast Vorfahrt".
+    test('gewähren und Vorfahrtstraße bleiben auseinander', () {
+      for (final pair in {
+        'Vorfahrt gewähren': 'vorfahrt_gewaehren',
+        'Vorfahrt beachten': 'vorfahrt_gewaehren',
+        'der hat Vorfahrt': 'vorfahrt_gewaehren',
+        'Vorfahrtstraße': 'vorfahrtstrasse',
+        'du hast Vorfahrt': 'vorfahrtstrasse',
+      }.entries) {
+        final r = parseUtterance(pair.key);
+        expect(r.key, pair.value, reason: pair.key);
+        expect(r.outcome, ParseOutcome.matched, reason: pair.key);
+      }
+    });
+  });
+
   group('Unscharfe Treffer', () {
     test('Verhörer landen beim gemeinten Kommando', () {
       for (final pair in {
