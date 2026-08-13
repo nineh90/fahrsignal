@@ -85,6 +85,57 @@ void main() {
     }
   });
 
+  group('Nachgebaute Schilder', () {
+    test('jede Kommandoart bekommt die Schildklasse ihrer Bedeutung', () {
+      final erwartet = {
+        // Fahrauftrag = Gebot (blauer Kreis, wie VZ 209).
+        'einordnen_links': SignStyle.vorschrift,
+        'folgen': SignStyle.vorschrift,
+        'rueckwaerts': SignStyle.vorschrift,
+        'gfa_laengs': SignStyle.vorschrift,
+        // Tempo = Beschränkung (roter Ring, wie VZ 274).
+        'langsamer': SignStyle.verbot,
+        'schneller': SignStyle.verbot,
+        // … außer dem Notruf, der ist eine Gefahr.
+        'bremsen': SignStyle.gefahr,
+        // Hinweise verlangen Aufmerksamkeit = Gefahrzeichen (VZ 101).
+        'schulterblick': SignStyle.gefahr,
+        'spiegel': SignStyle.gefahr,
+        'abstand': SignStyle.gefahr,
+        'anhalten': SignStyle.gefahr,
+        // Alles Erklärende informiert (blaues Rechteck, wie VZ 314).
+        'verbandskasten': SignStyle.richt,
+        'abs': SignStyle.richt,
+        'lob': SignStyle.richt,
+        'pause': SignStyle.richt,
+      };
+      for (final e in erwartet.entries) {
+        expect(commandByKey(e.key)!.signStyle, e.value, reason: e.key);
+      }
+    });
+
+    testWidgets('jedes Kommando rendert als Schild – ohne Ausnahme', (
+      tester,
+    ) async {
+      for (final def in kCommandCatalog) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(child: TrafficSign(def: def, size: 96)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: def.key);
+        expect(
+          find.byType(TrafficSign),
+          findsOneWidget,
+          reason: '${def.key} zeichnet nichts',
+        );
+      }
+    });
+  });
+
   testWidgets('das Querformat-Schild wird nicht ins Quadrat gequetscht', (
     tester,
   ) async {

@@ -102,7 +102,12 @@ void main() {
         'so, dann fährst du jetzt bitte mal rechts ran': 'anhalten',
         'du musst noch den Schulterblick machen': 'schulterblick',
         'hier fährst du bitte 30': 't_30',
-        'wir machen jetzt mal quer parken': 'gfa_quer',
+        // Ohne Richtungsangabe: rückwärts – nur nicht „Halten".
+        'wir machen jetzt mal quer parken': 'gfa_quer_rueck',
+        'jetzt bitte querparken rückwärts': 'gfa_quer_rueck',
+        'einmal quer parken vorwärts bitte': 'gfa_quer_vor',
+        'jetzt quer parken rückwärts': 'gfa_quer_rueck',
+        'wir üben Längseinparken rückwärts': 'gfa_laengs',
       }.entries) {
         final r = parseUtterance(pair.key);
         expect(r.key, pair.value, reason: pair.key);

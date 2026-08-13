@@ -253,9 +253,9 @@ class _CommandDisplay extends StatelessWidget {
       150.0,
       260.0,
     );
-    final baseVisual = primary != null && primary.isSign
+    final baseVisual = primary != null
         ? TrafficSign(def: primary, size: signSize)
-        : Icon(primary?.icon ?? Icons.info, color: fg, size: 150);
+        : Icon(Icons.info, color: fg, size: 150);
 
     // Ordnungszahl als Plakette am Symbol: „zweite Straße links" muss auf
     // einen Blick von „links" unterscheidbar sein.
@@ -278,16 +278,23 @@ class _CommandDisplay extends StatelessWidget {
       children: [
         visual,
         const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            displayLabel(c).toUpperCase(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: fg,
-              fontSize: secondaries.isEmpty ? 68 : 52,
-              fontWeight: FontWeight.bold,
-              height: 1.03,
+        // Nur das **Wort** darf schrumpfen, wenn es lang ist – nicht das
+        // Zeichen mit. Ohne diese eigene Begrenzung zog ein „SCHULTERBLICK"
+        // den umgebenden FittedBox zusammen und das Schild wurde nebenbei
+        // halb so groß wie bei „LINKS": gleiche Kachel, zwei Größen.
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width - 40,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              displayLabel(c).toUpperCase(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: fg,
+                fontSize: secondaries.isEmpty ? 68 : 52,
+                fontWeight: FontWeight.bold,
+                height: 1.03,
+              ),
             ),
           ),
         ),
@@ -368,7 +375,7 @@ class _ExplainedDisplay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          Icon(def.icon, color: fg, size: ask ? 108 : 92),
+          TrafficSign(def: def, size: ask ? 132 : 116),
           const SizedBox(height: 18),
           Text(
             def.label.toUpperCase(),
@@ -450,12 +457,9 @@ class _SecondaryChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Auch hier das echte Zeichen: „links und dann rechts" zeigte sonst
-          // oben ein Schild und daneben einen Icon-Pfeil für dieselbe Sache.
-          if (def.isSign)
-            TrafficSign(def: def, size: 34)
-          else
-            Icon(def.icon, color: fg, size: 30),
+          // Auch hier das Schild: „links und dann rechts" zeigte sonst oben
+          // ein Schild und daneben einen Icon-Pfeil für dieselbe Sache.
+          TrafficSign(def: def, size: 34),
           const SizedBox(width: 10),
           Text(
             def.label.toUpperCase(),

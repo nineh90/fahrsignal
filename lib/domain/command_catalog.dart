@@ -23,6 +23,30 @@ Urgency maxUrgency(Iterable<Urgency> us) =>
 /// `limit` = rundes Verbotszeichen mit Zahl, `ende` = Aufhebung (VZ 282).
 enum SignShape { none, limit, ende }
 
+/// Schildklasse für Kommandos, zu denen es **kein** amtliches Zeichen gibt.
+/// Sie werden trotzdem als Schild gezeichnet – in der Formensprache der StVO,
+/// damit auf dem Schülerschirm alles dieselbe Bildsprache spricht.
+///
+/// Die vier Klassen sind die echten: Form und Farbe tragen im Straßenverkehr
+/// bereits eine Bedeutung, und die passt hier auf die Kommandoarten.
+enum SignStyle {
+  /// Blauer Kreis, weißes Symbol – **Gebot**: „so fahren".
+  /// (Wie VZ 209 „vorgeschriebene Fahrtrichtung".)
+  vorschrift,
+
+  /// Weiße Scheibe mit rotem Ring, schwarzes Symbol – **Beschränkung**.
+  /// (Wie VZ 274 „Tempolimit".)
+  verbot,
+
+  /// Weißes Dreieck mit rotem Rand, schwarzes Symbol – **Gefahr/Achtung**.
+  /// (Wie VZ 101.) Trägt alles, was erhöhte Aufmerksamkeit verlangt.
+  gefahr,
+
+  /// Blaues Rechteck, weißes Symbol – **Information**.
+  /// (Wie VZ 314 „Parken".) Für alles Erklärende und Organisatorische.
+  richt,
+}
+
 /// Oberbereiche des Sender-Dashboards.
 enum DashboardMode { fahrt, grundfahren, fahrzeug, fahrschueler }
 
@@ -186,10 +210,34 @@ class CommandDef {
   /// Beschriftung der Sender-Kachel.
   String get tileText => tileLabel.isEmpty ? label : tileLabel;
 
+  /// Trägt ein amtliches Zeichen (Bild oder gezeichnetes Tempo-Schild).
+  /// Alles andere wird über [signStyle] als Schild **nachgebaut** – ein
+  /// Kommando ohne Schild gibt es nicht mehr.
   bool get isSign => sign != SignShape.none || vz.isNotEmpty;
 
   /// Pfad des Zeichenbildes; leer, wenn das Zeichen gezeichnet wird.
   String get vzAsset => vz.isEmpty ? '' : 'assets/signs/vz$vz.svg';
+
+  /// Schildklasse für den Nachbau. Sie hängt an Kategorie und Dringlichkeit,
+  /// nicht am einzelnen Kommando: eine neue Kachel bekommt damit automatisch
+  /// das Schild, das zu ihrer Art passt.
+  SignStyle get signStyle => switch (category) {
+    // Fahraufträge sind Gebote.
+    CommandCategory.richtung ||
+    CommandCategory.grundfahraufgabe => SignStyle.vorschrift,
+    // Tempo ist eine Beschränkung – dieselbe Klasse wie VZ 274, damit
+    // „Langsamer" und „Tempo 30" als dieselbe Art Ansage lesbar sind.
+    // „Bremsen" fällt heraus: das ist kein Limit, sondern ein Notruf.
+    CommandCategory.tempo =>
+      urgency == Urgency.dringend ? SignStyle.gefahr : SignStyle.verbot,
+    // Hinweise verlangen erhöhte Aufmerksamkeit – das ist die Bedeutung des
+    // Gefahrzeichens. Gilt für die ganze Kategorie, auch für die ruhigen
+    // Einträge: „Schulterblick" ist kein Hinweisschild, sondern ein Achtung.
+    CommandCategory.hinweis => SignStyle.gefahr,
+    // Der Rest informiert (Fahrzeugkunde, Lob, Coaching, Organisation) –
+    // außer es drängt, dann zählt die Dringlichkeit mehr als das Thema.
+    _ => urgency == Urgency.info ? SignStyle.richt : SignStyle.gefahr,
+  };
 }
 
 /// Ausgangskatalog. Erweiterbar; später ggf. konfigurierbar je Fahrschule.
@@ -357,7 +405,10 @@ const List<CommandDef> kCommandCatalog = [
   CommandDef(
     'bremsen',
     'Bremsen',
-    Icons.report_problem,
+    // Ausrufezeichen, nicht das Warndreieck-Icon: das Zeichen *ist* schon ein
+    // Dreieck – zusammen ergäbe das ein Dreieck im Dreieck (VZ 101 lässt die
+    // Fläche frei und stellt genau dieses Ausrufezeichen hinein).
+    Icons.priority_high,
     Urgency.dringend,
     CommandCategory.tempo,
   ),
@@ -534,17 +585,31 @@ const List<CommandDef> kCommandCatalog = [
   // *angekündigt*, bevor es losgeht – nichts davon ist eine Sofortreaktion.
   CommandDef(
     'gfa_laengs',
-    'Längs parken',
+    'Längs parken rückwärts',
     Icons.local_parking,
     Urgency.info,
     CommandCategory.grundfahraufgabe,
+    group: 'einparken',
   ),
+  // Quer parken ist zwei Aufgaben, nicht eine: vorwärts und rückwärts werden
+  // getrennt geübt und geprüft. Die drei Einpark-Aufgaben stehen als Gruppe in
+  // einer Zeile – sie unterscheiden sich nur in Lage und Fahrtrichtung und
+  // sollen beim Tippen direkt vergleichbar sein.
   CommandDef(
-    'gfa_quer',
-    'Quer parken',
-    Icons.view_week,
+    'gfa_quer_vor',
+    'Quer parken vorwärts',
+    Icons.arrow_upward,
     Urgency.info,
     CommandCategory.grundfahraufgabe,
+    group: 'einparken',
+  ),
+  CommandDef(
+    'gfa_quer_rueck',
+    'Quer parken rückwärts',
+    Icons.arrow_downward,
+    Urgency.info,
+    CommandCategory.grundfahraufgabe,
+    group: 'einparken',
   ),
   CommandDef(
     'gfa_bremsung',

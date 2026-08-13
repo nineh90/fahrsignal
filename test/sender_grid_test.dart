@@ -79,7 +79,7 @@ void main() {
     }
     expect(sizes, isNotEmpty);
     expect(sizes, hasLength(1), reason: 'genau ein Kachelmaß: $sizes');
-    expect(sizes.first.height, 84);
+    expect(sizes.first.height, 100);
     expect(sizes.first.width, lessThanOrEqualTo(118));
   });
 

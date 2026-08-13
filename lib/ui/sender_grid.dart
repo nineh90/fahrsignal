@@ -298,7 +298,9 @@ class _RainbowStrip extends StatelessWidget implements PreferredSizeWidget {
 /// einer Gruppenzeile. Die Breite ist eine Obergrenze: das Raster füllt die
 /// Zeile, indem es die Kacheln bis auf diesen Wert wachsen lässt.
 const double _kTileMaxWidth = 118;
-const double _kTileHeight = 84;
+// Höher als das ursprüngliche Maß: das Schild ist der Inhalt der Kachel und
+// soll im Auto aus dem Augenwinkel erkennbar sein, nicht nur die Beschriftung.
+const double _kTileHeight = 100;
 const double _kTileGap = 10;
 
 /// Spaltenzahl und daraus die Kachelbreite – dieselbe Rechnung wie in
@@ -467,9 +469,7 @@ class _CommandTile extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  def.isSign
-                      ? TrafficSign(def: def, size: 34)
-                      : Icon(def.icon, color: Colors.white, size: 27),
+                  TrafficSign(def: def, size: 42),
                   const SizedBox(height: 6),
                   Text(
                     def.tileText,

@@ -566,14 +566,10 @@ class _CandidateTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              if (def != null && def.isSign)
+              if (def != null)
                 TrafficSign(def: def, size: 34)
               else
-                Icon(
-                  def?.icon ?? Icons.info,
-                  size: 30,
-                  color: commandForeground(cmd),
-                ),
+                Icon(Icons.info, size: 30, color: commandForeground(cmd)),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

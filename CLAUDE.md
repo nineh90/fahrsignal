@@ -298,6 +298,70 @@ zum Bindestrich: 325.1 → `vz325-1.svg`), `vz: '<nr>'` an den Katalogeintrag, E
 `test/traffic_sign_test.dart` ergänzen, Sprechvarianten in `command_phrases.dart` – und
 nur bei nicht-quadratischer Form eine Zeile in `_aspect`.
 
+### Kommandos ohne amtliches Zeichen
+
+Rückmeldung (13.08.2026): **Auch die übrigen Kacheln sollen Schilder sein.** Für
+„Links einordnen" gibt es kein amtliches Zeichen – aber es *kann* eines aussehen wie
+eines. `SignStyle` baut deshalb jedes verbleibende Kommando in der Formensprache der
+StVO nach: das Material-Symbol des Katalogeintrags steht auf einer gezeichneten
+Schildform. Damit spricht der Schülerschirm durchgehend dieselbe Bildsprache, statt
+zwischen Schildern und Piktogrammen zu springen.
+
+Form und Farbe sind nicht dekorativ gewählt – sie tragen im Straßenverkehr bereits
+Bedeutung, und die passt auf die Kommandoarten:
+
+| Klasse | Aussehen | Bedeutung | Kategorien |
+|---|---|---|---|
+| `vorschrift` | blauer Kreis, weißes Symbol | Gebot: „so fahren" | Richtung, Grundfahraufgaben |
+| `verbot` | weiße Scheibe, roter Ring, schwarzes Symbol | Beschränkung | Tempo |
+| `gefahr` | weißes Dreieck, roter Rand, schwarzes Symbol | Achtung | Hinweise + alles Dringende |
+| `richt` | blaues Quadrat, weißes Symbol | Information | Fahrzeug, Lob, Coaching, Organisation |
+
+Die Zuordnung hängt an **Kategorie und Dringlichkeit**, nicht am einzelnen Kommando
+(`CommandDef.signStyle`): eine neue Kachel bekommt damit ohne Zutun das Schild, das zu
+ihrer Art passt. Zwei Stellen weichen bewusst ab:
+
+- **„Bremsen" ist ein Gefahrzeichen**, obwohl es bei Tempo steht – es ist kein Limit,
+  sondern ein Notruf. Sein Symbol ist deshalb das Ausrufezeichen und nicht das
+  Warndreieck-Icon: das Zeichen *ist* schon ein Dreieck, sonst stünde eines im anderen.
+  Zusammen ergibt das VZ 101.
+- **„Schulterblick" & Co. sind Gefahrzeichen**, auch die ruhig eingestuften. Ein
+  Schulterblick ist kein Hinweisschild, sondern ein Achtung.
+
+**Der weiße Saum gilt auch hier** – und für die gezeichneten Tempo-Zeichen ebenso: ohne
+ihn läuft VZ 274 auf der roten Tempo-Kachel in den Grund über. Alle Painter lassen dafür
+`_kBleed` (4,5 % der Kantenlänge) frei; bei den SVG-Zeichen macht dasselbe die
+vergrößerte weiße Silhouette.
+
+### Damit alle Schilder gleich groß *wirken*
+
+Gleiche Kantenlänge heißt nicht gleiche Wirkung: bei gleicher Breite hat ein Dreieck nur
+43 % der Fläche eines Quadrats, ein Kreis 79 %, eine Raute 50 %. Nebeneinander sah das
+Raster dadurch unruhig aus – die Dreiecke (Schulterblick, Bremsen, Ampel) wirkten
+verloren, das blaue P-Quadrat übergroß.
+
+`TrafficSign.size` ist deshalb die **optische Größe**, nicht die Kantenlänge; `_optisch`
+hebt oder senkt die Box je Form (Dreieck 1,16 · Raute 1,12 · Achteck 1,03 · Kreis 1,00 ·
+Quadrat 0,92). Die Zahlen sind an gerenderten Reihen abgeglichen, nicht rein gerechnet:
+eine reine Flächennormierung ließe das Dreieck aufdringlich groß werden. Das Dreieck
+bekommt zusätzlich eine breitere Box (`_aspect` = 1/0,866), sonst bliebe es bei gleicher
+Höhe schmaler als ein Kreis.
+
+Zwei Fallen, die beim Nachbauen aufgefallen sind:
+
+- **Das Dreieck wird um seinen Inkreismittelpunkt verkleinert**, nicht um die Boxmitte.
+  Sonst ist der rote Rand unten breiter als oben und das Zeichen sieht schief aus.
+  Ein Rand von `w` kostet dabei `w / 0,2887` an Basisbreite – knapp das Dreieinhalbfache;
+  deshalb ist die Randstärke mit 10 % der Höhe deutlich kleiner, als sie sich anfühlt.
+- **Auf dem Empfängerschirm skalierte ein `FittedBox` Zeichen und Wort gemeinsam.** Ein
+  langes „SCHULTERBLICK" zog damit das Schild auf ein Drittel zusammen, während „LINKS"
+  es groß stehen ließ – gleiche Anzeige, zwei Größen. Jetzt schrumpft nur noch das Wort
+  (eigener `FittedBox` in Bildschirmbreite), das Zeichen bleibt konstant.
+
+Maße: Kachel 100 px hoch mit 42 px Zeichen (vorher 84/34 – das Schild ist der Inhalt der
+Kachel und muss aus dem Augenwinkel erkennbar sein), Empfänger halbe kurze Bildschirm-
+kante, 150–260 px.
+
 ## Logo & App-Icons
 
 Die App trägt seit dem 08.08.2026 **Sarahs Logo** (Regenbogenbogen um ein Lenkrad mit

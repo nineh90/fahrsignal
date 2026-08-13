@@ -263,13 +263,40 @@ const Map<String, List<String>> kCommandPhrases = {
   // „seitwaerts einparken" hört hier mit: das frühere Richtungs-Kommando
   // ist genau diese Grundfahraufgabe, gesprochen soll es weiter greifen.
   'gfa_laengs': [
-    'laengs parken',
+    'laengs parken rueckwaerts',
+    'laengseinparken rueckwaerts',
+    'laengseinparken',
     'laengs einparken',
+    'laengs parken',
     'seitwaerts einparken',
     'seitwaerts parken',
     'einparken',
   ],
-  'gfa_quer': ['quer parken', 'quer einparken', 'rueckwaerts quer einparken'],
+  // Die kurze Form („querparken", „quer einparken") lässt die Fahrtrichtung
+  // offen und liegt trotzdem bei *rückwärts*: ohne Phrase fiele sie auf
+  // „parken" (= Halten) zurück und der Schüler bekäme mitten in der Übung ein
+  // Halte-Zeichen. Halb richtig schlägt völlig falsch – wer vorwärts meint,
+  // sagt es dazu oder tippt die Kachel.
+  'gfa_quer_vor': [
+    'quer parken vorwaerts',
+    'querparken vorwaerts',
+    'quer vorwaerts einparken',
+    'quer vorwaerts',
+    'vorwaerts einparken',
+    'vorwaerts in die luecke',
+  ],
+  'gfa_quer_rueck': [
+    'quer parken rueckwaerts',
+    'querparken rueckwaerts',
+    'querparken',
+    'quer parken',
+    'quer einparken',
+    'quer rueckwaerts einparken',
+    'quer rueckwaerts',
+    'rueckwaerts quer einparken',
+    'rueckwaerts einparken',
+    'rueckwaerts in die luecke',
+  ],
   'gfa_bremsung': ['gefahrenbremsung', 'gefahrbremsung', 'zielbremsung'],
   'gfa_ecke': ['rechts um die ecke', 'rueckwaerts um die ecke', 'um die ecke'],
   'gfa_umkehren': ['umkehren', 'umkehr', 'umkehren durch rueckwaertsfahren'],
