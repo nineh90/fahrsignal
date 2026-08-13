@@ -50,6 +50,38 @@ void main() {
     expect(tops, hasLength(1));
   });
 
+  // iPad/Desktop: hier bekamen die Gruppenzeilen („1./2./3. Ausfahrt",
+  // „Einordnen") früher die volle Breite geteilt durch Gruppengröße – also
+  // dreimal so große Kacheln wie das freie Raster daneben.
+  testWidgets('Alle Kacheln sind gleich groß – auch auf breitem Display', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1180, 820);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: SenderGrid())),
+    );
+    await tester.pumpAndSettle();
+
+    final sizes = <Size>{};
+    for (final cat in categoriesInMode(DashboardMode.fahrt)) {
+      for (final def in commandsInCategory(cat)) {
+        final tile = find.ancestor(
+          of: find.text(def.tileText),
+          matching: find.byType(InkWell),
+        );
+        if (tile.evaluate().isEmpty) continue; // noch nicht gescrollt
+        sizes.add(tester.getSize(tile.first));
+      }
+    }
+    expect(sizes, isNotEmpty);
+    expect(sizes, hasLength(1), reason: 'genau ein Kachelmaß: $sizes');
+    expect(sizes.first.height, 84);
+    expect(sizes.first.width, lessThanOrEqualTo(118));
+  });
+
   testWidgets('Symbol und Beschriftung sitzen mittig in der Kachel', (
     tester,
   ) async {

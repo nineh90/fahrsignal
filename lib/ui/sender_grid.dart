@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/command_catalog.dart';
@@ -254,6 +256,21 @@ class _RainbowStrip extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// Kachelmaße – gelten für **jede** Kachel, egal ob im freien Raster oder in
+/// einer Gruppenzeile. Die Breite ist eine Obergrenze: das Raster füllt die
+/// Zeile, indem es die Kacheln bis auf diesen Wert wachsen lässt.
+const double _kTileMaxWidth = 118;
+const double _kTileHeight = 84;
+const double _kTileGap = 10;
+
+/// Spaltenzahl und daraus die Kachelbreite – dieselbe Rechnung wie in
+/// `SliverGridDelegateWithMaxCrossAxisExtent`, nur selbst gemacht, damit
+/// Gruppenzeilen exakt dasselbe Maß verwenden können.
+double _tileWidth(double available) {
+  final cols = (available / (_kTileMaxWidth + _kTileGap)).ceil().clamp(1, 999);
+  return (available - _kTileGap * (cols - 1)) / cols;
+}
+
 class _CategorySection extends StatelessWidget {
   final CommandCategory cat;
   final void Function(CommandDef) onTap;
@@ -262,59 +279,72 @@ class _CategorySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = commandsInCategory(cat);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
-          child: Row(
-            children: [
-              Icon(cat.icon, size: 18, color: cat.color),
-              const SizedBox(width: 8),
-              Text(
-                cat.label.toUpperCase(),
-                style: TextStyle(
-                  color: cat.color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: .08,
-                ),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final width = _tileWidth(c.maxWidth);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
+              child: Row(
+                children: [
+                  Icon(cat.icon, size: 18, color: cat.color),
+                  const SizedBox(width: 8),
+                  Text(
+                    cat.label.toUpperCase(),
+                    style: TextStyle(
+                      color: cat.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .08,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        for (final row in _rows(items)) ...[
-          if (row.first.group.isEmpty)
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 118,
-                mainAxisExtent: 84,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemCount: row.length,
-              itemBuilder: (_, i) => _CommandTile(def: row[i], onTap: onTap),
-            )
-          else
-            // Feste Spaltenzahl = Gruppengröße: die Gruppe steht garantiert
-            // in einer Zeile, unabhängig von der Displaybreite.
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: row.length,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 118 / 84,
-              children: [
-                for (final d in row) _CommandTile(def: d, onTap: onTap),
-              ],
             ),
-          const SizedBox(height: 10),
-        ],
-        const SizedBox(height: 4),
-      ],
+            for (final row in _rows(items)) ...[
+              if (row.first.group.isEmpty)
+                Wrap(
+                  spacing: _kTileGap,
+                  runSpacing: _kTileGap,
+                  children: [
+                    for (final d in row)
+                      SizedBox(
+                        width: width,
+                        height: _kTileHeight,
+                        child: _CommandTile(def: d, onTap: onTap),
+                      ),
+                  ],
+                )
+              else
+                // Die Gruppe steht garantiert in einer Zeile. Passt sie bei
+                // regulärer Kachelbreite nicht (schmales Handy), schrumpfen
+                // nur ihre Kacheln – wachsen dürfen sie nie, sonst hätte
+                // dieselbe Kachel auf dem iPad die dreifache Größe.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < row.length; i++) ...[
+                      if (i > 0) const SizedBox(width: _kTileGap),
+                      SizedBox(
+                        width: math.min(
+                          width,
+                          (c.maxWidth - _kTileGap * (row.length - 1)) /
+                              row.length,
+                        ),
+                        height: _kTileHeight,
+                        child: _CommandTile(def: row[i], onTap: onTap),
+                      ),
+                    ],
+                  ],
+                ),
+              const SizedBox(height: _kTileGap),
+            ],
+            const SizedBox(height: 4),
+          ],
+        );
+      },
     );
   }
 }
