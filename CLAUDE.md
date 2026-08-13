@@ -263,6 +263,7 @@ dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 | Halten | VZ 314 (Parken) |
 | Stop | VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft |
 | Schritttempo | VZ 325.1 – das Spielstraßen-Schild *ist* die Anweisung; eine Zahl 4–7 im Verbotszeichen steht so an keiner Straße |
+| 30er Zone | VZ 274.1 – gilt bis zum Zonenende und ist damit eine andere Ansage als ein Limit an einer Stelle |
 | Tempo 30/50/70/100 | VZ 274, **gezeichnet** (`SignShape.limit`) |
 | Unbegrenzt | VZ 282, gezeichnet (`SignShape.ende`) |
 

@@ -36,6 +36,7 @@ void main() {
         'ampel': '131',
         'parken': '314',
         't_schritt': '325-1',
+        't_zone30': '274-1',
         'vorfahrt_gewaehren': '205',
         'vorfahrtstrasse': '306',
         'stopp': '206',

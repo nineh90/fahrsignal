@@ -58,8 +58,8 @@ double _optisch(CommandDef def) {
       '306' => 1.12,
       // Achteck kommt dem Kreis nahe.
       '206' => 1.03,
-      // Vollflächiges Quadrat wirkt am größten und wird zurückgenommen.
-      '314' => 0.92,
+      // Vollflächige Quadrate wirken am größten und werden zurückgenommen.
+      '314' || '274-1' => 0.92,
       // Querformat-Schild: tanzt aus der Reihe, bleibt bei voller Höhe.
       _ => 1,
     };

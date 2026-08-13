@@ -443,6 +443,16 @@ const List<CommandDef> kCommandCatalog = [
     sign: SignShape.limit,
     signText: '30',
   ),
+  // Zonenschild statt Einzelanordnung: VZ 274.1 gilt bis zum Ende der Zone
+  // und ist damit eine andere Ansage als das Tempolimit an einer Stelle.
+  CommandDef(
+    't_zone30',
+    '30er Zone',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    vz: '274-1',
+  ),
   CommandDef(
     't_50',
     'Tempo 50',
@@ -1169,7 +1179,7 @@ const Set<String> kExamHiddenKeys = {
   'langsamer', 'schneller',
   // Das zulässige Tempo aus den Schildern abzuleiten ist Prüfungsleistung –
   // die Vorgabe wäre die halbe Antwort.
-  't_schritt', 't_30', 't_50', 't_70', 't_100', 't_frei',
+  't_schritt', 't_30', 't_zone30', 't_50', 't_70', 't_100', 't_frei',
 };
 
 /// Notkommandos. Sie überstimmen jede Sperre: die Fahrlehrperson trägt auch
