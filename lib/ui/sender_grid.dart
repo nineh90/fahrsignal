@@ -458,49 +458,33 @@ class _CommandTile extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => onTap(def),
-        child: Stack(
-          // Ohne das richtet der Stack sein Kind oben links aus – und da die
-          // Column nur so breit ist wie ihr längstes Wort, klebten kurze
-          // Beschriftungen („Links") samt Symbol am linken Kachelrand.
-          alignment: Alignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TrafficSign(def: def, size: 42),
-                  const SizedBox(height: 6),
-                  Text(
-                    def.tileText,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      height: 1.05,
-                      fontWeight: FontWeight.w600,
-                    ),
+        // Nur Schild und Wort. Der frühere Urgency-Punkt oben rechts ist
+        // raus: die Dringlichkeit steht der Fahrlehrperson schon in der
+        // Kachelfarbe und im Schild selbst gegenüber – auf dem Empfängerschirm
+        // trägt sie ohnehin die Vollfläche.
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TrafficSign(def: def, size: 42),
+                const SizedBox(height: 6),
+                Text(
+                  def.tileText,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.5,
+                    height: 1.05,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
-              ),
-            ),
-            // Urgency-Indikator (Farbe/Vibration beim Empfänger)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                width: 11,
-                height: 11,
-                decoration: BoxDecoration(
-                  color: urgencyColor(def.urgency),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
