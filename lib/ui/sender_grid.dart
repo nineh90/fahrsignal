@@ -29,11 +29,11 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   bool _ask = true;
 
   void _tap(CommandDef d) {
+    // Im Prüfungsmodus wird nur abgefragt, nie erklärt.
+    final ask = (_ask || ref.read(examModeProvider)) && d.hasExplanation;
     ref
         .read(transportProvider)
-        .sendCommand(
-          DriveCommand.now(d.key, d.urgency, ask: _ask && d.hasExplanation),
-        );
+        .sendCommand(DriveCommand.now(d.key, d.urgency, ask: ask));
   }
 
   Future<void> _composeFreitext() async {
@@ -70,12 +70,39 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
     }
   }
 
+  /// Prüfungsmodus umschalten. Der Wechsel verändert das halbe Raster, deshalb
+  /// eine kurze Rückmeldung – sonst wirkt es wie ein Fehler.
+  void _toggleExam() {
+    ref.read(examModeProvider.notifier).toggle();
+    final on = ref.read(examModeProvider);
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 3),
+          content: Text(
+            on
+                ? 'Prüfungsmodus an – nur Anweisungen, keine Hilfestellung.'
+                : 'Prüfungsmodus aus – alle Kacheln wieder da.',
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final room = ref.watch(roomCodeProvider);
+    final exam = ref.watch(examModeProvider);
     final connected =
         ref.watch(connectionStreamProvider).asData?.value ==
         TransportState.connected;
+
+    // Ein Bereich kann im Prüfungsmodus leer laufen (dann fehlt er im
+    // Umschalter); stand er gerade offen, auf den ersten verbliebenen wechseln.
+    final modes = modesWithContent(exam: exam);
+    final mode = modes.contains(_mode) ? _mode : modes.first;
+    // Erklärungen sind Hilfestellung – in der Prüfung wird nur abgefragt.
+    final ask = exam || _ask;
 
     return Scaffold(
       appBar: AppBar(
@@ -108,6 +135,14 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
             ),
           ),
           IconButton(
+            tooltip: exam ? 'Prüfungsmodus beenden' : 'Prüfungsmodus starten',
+            isSelected: exam,
+            // Nicht Icons.school – das trägt schon der Bereich „Fahrschüler".
+            icon: const Icon(Icons.gavel),
+            selectedIcon: const Icon(Icons.gavel, color: Color(0xFFFFC46B)),
+            onPressed: _toggleExam,
+          ),
+          IconButton(
             tooltip: 'Hell/Dunkel',
             icon: Icon(
               Theme.of(context).brightness == Brightness.dark
@@ -122,6 +157,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
       ),
       body: Column(
         children: [
+          if (exam) const _ExamBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
             child: LayoutBuilder(
@@ -133,7 +169,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
                 final iconOnly = c.maxWidth < 400;
                 return SegmentedButton<DashboardMode>(
                   segments: [
-                    for (final m in DashboardMode.values)
+                    for (final m in modes)
                       ButtonSegment(
                         value: m,
                         icon: (showIcons || iconOnly) ? Icon(m.icon) : null,
@@ -148,7 +184,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
                         tooltip: m.label,
                       ),
                   ],
-                  selected: {_mode},
+                  selected: {mode},
                   showSelectedIcon: false,
                   expandedInsets: EdgeInsets.zero,
                   onSelectionChanged: (s) => setState(() => _mode = s.first),
@@ -156,7 +192,9 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
               },
             ),
           ),
-          if (_mode == DashboardMode.fahrzeug)
+          // In der Prüfung gibt es nichts zu erklären – der Umschalter steht
+          // fest auf „Abfragen" und verschwindet.
+          if (mode == DashboardMode.fahrzeug && !exam)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
               child: SegmentedButton<bool>(
@@ -182,15 +220,15 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               children: [
-                for (final cat in categoriesInMode(_mode))
-                  _CategorySection(cat: cat, onTap: _tap),
+                for (final cat in categoriesInMode(mode, exam: exam))
+                  _CategorySection(cat: cat, exam: exam, onTap: _tap),
               ],
             ),
           ),
         ],
       ),
       bottomNavigationBar: _SenderBottomBar(
-        askDefault: _ask,
+        askDefault: ask,
         onFreitext: _composeFreitext,
         onOff: () => ref
             .read(transportProvider)
@@ -271,14 +309,54 @@ double _tileWidth(double available) {
   return (available - _kTileGap * (cols - 1)) / cols;
 }
 
-class _CategorySection extends StatelessWidget {
-  final CommandCategory cat;
-  final void Function(CommandDef) onTap;
-  const _CategorySection({required this.cat, required this.onTap});
+/// Deutlich sichtbares Band, solange der Prüfungsmodus läuft. Ohne das wäre
+/// das halbe fehlende Raster nicht von einem Fehler zu unterscheiden.
+class _ExamBanner extends StatelessWidget {
+  const _ExamBanner();
 
   @override
   Widget build(BuildContext context) {
-    final items = commandsInCategory(cat);
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFC62828),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.gavel, size: 17, color: Colors.white),
+          SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'PRÜFUNGSMODUS – nur Anweisungen',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategorySection extends StatelessWidget {
+  final CommandCategory cat;
+  final bool exam;
+  final void Function(CommandDef) onTap;
+  const _CategorySection({
+    required this.cat,
+    required this.exam,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = commandsInCategory(cat, exam: exam);
     return LayoutBuilder(
       builder: (context, c) {
         final width = _tileWidth(c.maxWidth);

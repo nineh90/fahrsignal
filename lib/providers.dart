@@ -19,6 +19,20 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
 );
 
+/// Prüfungsmodus: blendet im Sender jede Hilfestellung aus, es bleiben nur
+/// Anweisungen. Reiner Senderzustand – der Empfänger zeigt ohnehin nur, was
+/// ankommt. Standard: aus.
+class ExamModeNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+}
+
+final examModeProvider = NotifierProvider<ExamModeNotifier, bool>(
+  ExamModeNotifier.new,
+);
+
 /// Aktiver 6-stelliger Raumcode. Im Dev-Harness fix "DEV".
 class RoomCodeNotifier extends Notifier<String> {
   @override

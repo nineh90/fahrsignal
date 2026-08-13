@@ -96,6 +96,24 @@ class _PttBarState extends ConsumerState<PttBar> {
       (commandByKey(key)?.hasExplanation ?? false) &&
       (intent.ask ?? widget.askDefault);
 
+  /// Bleibt für diese Äußerung im Prüfungsmodus überhaupt etwas übrig?
+  bool _examBlocks(ParsedIntent intent) {
+    if (!ref.read(examModeProvider)) return false;
+    final primaryOk =
+        intent.key != null && commandAllowedInExam(intent.toCommand());
+    if (primaryOk || intent.alternatives.any(keyAllowedInExam)) return false;
+    // Ohne jeden Katalogtreffer war es freie Rede – dann bleibt der
+    // Freitext-Weg offen, den der Prüfer ohnehin selbst formuliert.
+    return intent.key != null || intent.alternatives.isNotEmpty;
+  }
+
+  /// Alternativen der Rückfrage, in der Prüfung um die Hilfestellungen
+  /// gekürzt – eine gesperrte Kachel darf auch hier nicht auftauchen.
+  List<String> _offeredAlternatives(ParsedIntent intent) =>
+      ref.read(examModeProvider)
+      ? intent.alternatives.where(keyAllowedInExam).toList()
+      : intent.alternatives;
+
   void _onResult(SpeechResult r) {
     if (!mounted) return;
 
@@ -124,9 +142,18 @@ class _PttBarState extends ConsumerState<PttBar> {
     if (intent.canAutoSend) {
       _send(intent.toCommand(asAsk: _resolveAsk(intent, intent.key!)));
       setState(() => _pending = null);
-    } else {
-      setState(() => _pending = intent);
+      return;
     }
+
+    // Rückfrage: im Prüfungsmodus erst gar nichts Gesperrtes zur Auswahl
+    // stellen. Bleibt nichts übrig, kurz Bescheid geben statt eine leere
+    // Karte zu zeigen.
+    if (_examBlocks(intent)) {
+      setState(() => _pending = null);
+      _flashNotice('Im Prüfungsmodus gesperrt');
+      return;
+    }
+    setState(() => _pending = intent);
   }
 
   /// Erkennung ist zu Ende (Status idle/error nach dem Loslassen), aber es
@@ -157,6 +184,14 @@ class _PttBarState extends ConsumerState<PttBar> {
   }
 
   void _send(DriveCommand cmd) {
+    // Die Sprache erreicht den Katalog an den Kacheln vorbei – der
+    // Prüfungsmodus wäre löchrig, wenn „Schulterblick" gesprochen doch
+    // durchginge. Notkommandos sind davon ausgenommen (siehe Katalog).
+    if (ref.read(examModeProvider) && !commandAllowedInExam(cmd)) {
+      _flashNotice('Im Prüfungsmodus gesperrt');
+      return;
+    }
+
     // Doppelte Auslösung innerhalb von 1,5 s verwerfen – die Erkennung
     // liefert nach einem Neustart gelegentlich dasselbe Ergebnis erneut.
     final signature = '${cmd.keys.join('+')}|${cmd.ord}';
@@ -232,6 +267,17 @@ class _PttBarState extends ConsumerState<PttBar> {
     final theme = Theme.of(context);
     final supported = ref.watch(speechRecognizerProvider).isSupported;
     final active = _holding || _listening;
+    final exam = ref.watch(examModeProvider);
+
+    // Primärvorschlag der Rückfrage; im Prüfungsmodus fällt er weg, wenn er
+    // dort nichts zu suchen hat. Die Alternativen sind schon gefiltert.
+    DriveCommand? primary;
+    if (_pending?.outcome == ParseOutcome.matched) {
+      final cmd = _pending!.toCommand(
+        asAsk: _resolveAsk(_pending!, _pending!.key!),
+      );
+      if (!exam || commandAllowedInExam(cmd)) primary = cmd;
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -242,11 +288,8 @@ class _PttBarState extends ConsumerState<PttBar> {
             padding: const EdgeInsets.only(bottom: 10),
             child: _Candidates(
               intent: _pending!,
-              primary: _pending!.outcome == ParseOutcome.matched
-                  ? _pending!.toCommand(
-                      asAsk: _resolveAsk(_pending!, _pending!.key!),
-                    )
-                  : null,
+              alternatives: _offeredAlternatives(_pending!),
+              primary: primary,
               alternativeOf: (key) => DriveCommand.now(
                 key,
                 _urgencyOf(key),
@@ -410,7 +453,12 @@ class _HoldButton extends StatelessWidget {
 class _Candidates extends StatelessWidget {
   final ParsedIntent intent;
 
-  /// Sendefertiges Primärkommando; null bei „nicht erkannt".
+  /// Zur Auswahl gestellte Alternativ-Keys – im Prüfungsmodus bereits um die
+  /// gesperrten gekürzt, deshalb nicht direkt aus [intent] gelesen.
+  final List<String> alternatives;
+
+  /// Sendefertiges Primärkommando; null bei „nicht erkannt" oder wenn es die
+  /// Prüfung nicht erlaubt.
   final DriveCommand? primary;
 
   /// Baut das sendefertige Kommando zu einem Alternativ-Key (inkl. Abfrage-
@@ -423,6 +471,7 @@ class _Candidates extends StatelessWidget {
 
   const _Candidates({
     required this.intent,
+    required this.alternatives,
     required this.primary,
     required this.alternativeOf,
     required this.onPick,
@@ -433,7 +482,10 @@ class _Candidates extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final unmatched = intent.outcome == ParseOutcome.unmatched;
+    // „Nicht erkannt" gilt auch, wenn der Treffer im Prüfungsmodus wegfiel –
+    // aus Sicht des Bedieners steht dann genauso nichts zur Auswahl.
+    final unmatched =
+        intent.outcome == ParseOutcome.unmatched || primary == null;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -444,7 +496,7 @@ class _Candidates extends StatelessWidget {
           children: [
             Text(
               unmatched
-                  ? (intent.alternatives.isEmpty
+                  ? (alternatives.isEmpty
                         ? 'Nicht als Kommando erkannt'
                         : 'Meintest du …?')
                   : 'Bitte bestätigen',
@@ -456,10 +508,10 @@ class _Candidates extends StatelessWidget {
             Text('„${intent.transcript}"', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
 
-            if (!unmatched && primary != null)
+            if (primary != null)
               _CandidateTile(cmd: primary!, onTap: () => onPick(primary!)),
 
-            for (final key in intent.alternatives)
+            for (final key in alternatives)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: _CandidateTile(

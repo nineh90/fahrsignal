@@ -85,6 +85,42 @@ ein → keine Hardware nötig. Rollen: `sender` (Fahrlehrer) / `receiver` (Fahrs
 `urgency` steuert **Farbe und Vibrationsmuster**. Sonderkommando `off` blendet die Empfänger-
 Anzeige aus. Verlauf („letzte Hinweise") nur lokal auf dem Empfänger.
 
+### Prüfungsmodus
+
+Rückmeldung aus der Praxis (13.08.2026): **In der praktischen Prüfung darf nur beauftragt,
+nicht geholfen werden.** Ein „Schulterblick!" zur richtigen Sekunde nimmt dem Prüfling genau
+die Leistung ab, die geprüft wird. Der Sender hat deshalb einen Schalter im Header
+(`examModeProvider`), der jede Hilfestellung **aus dem Bild** nimmt – nicht ausgraut, damit
+niemand danach greift – und ein rotes Band einblendet.
+
+Die Grenze steht in `command_catalog.dart`, nicht in der UI:
+
+| Konstante | Wirkung |
+|---|---|
+| `kExamHiddenCategories` | ganze Kategorien: Hinweise, Lob & Kritik, Coaching |
+| `kExamHiddenKeys` | Einzelnes in erlaubten Kategorien: langsamer/schneller, alle Tempovorgaben |
+| `kExamSafetyKeys` | **überstimmt alles**: Bremsen, Anhalten, STOPP |
+
+Bewusst ganze Kategorien statt Einzelkeys: eine neue „Hinweis"-Kachel ist per Definition
+wieder eine Hilfestellung und soll ohne Codeänderung mitgesperrt sein.
+
+Was daran nicht verhandelbar ist:
+
+- **Die Notkommandos bleiben.** Die Fahrlehrperson trägt auch während der Prüfung die
+  Verantwortung im Auto. Deshalb steht „Hinweise" im Prüfungsmodus weiter da – mit genau
+  zwei Kacheln (Anhalten, STOPP).
+- **Die Sprachleiste hat dieselbe Sperre.** Sie erreicht den Katalog an den Kacheln vorbei;
+  ohne `commandAllowedInExam` in `_send` wäre der Modus reine Kosmetik. Gemischte Sätze
+  („links und Schulterblick") gehen **ganz** nicht raus, statt still beschnitten zu werden –
+  außer ein Notkommando steckt drin, dann zählt Sicherheit mehr als Prüfungsreinheit.
+- **Erklärungen sind Hilfe**: im Fahrzeug-Bereich verschwindet der Erklären/Abfragen-Umschalter
+  und steht fest auf „Abfragen".
+- **Freitext bleibt offen.** Der Prüfer formuliert dort selbst; das ist eine Anweisung in
+  eigenen Worten, keine Katalog-Hilfe.
+
+Der Modus ist reiner Senderzustand – der Empfänger zeigt ohnehin nur, was ankommt.
+`test/exam_mode_test.dart` hält die Grenze fest.
+
 ### Empfohlene Struktur
 ```
 lib/

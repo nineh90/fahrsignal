@@ -1038,13 +1038,85 @@ CommandDef? commandByKey(String key) {
   return null;
 }
 
-/// Kommandos einer Kategorie in Katalog-Reihenfolge.
-List<CommandDef> commandsInCategory(CommandCategory c) =>
-    kCommandCatalog.where((d) => d.category == c).toList();
+// ===== Prüfungsmodus =====
+//
+// Rückmeldung aus der Praxis: In der praktischen Prüfung darf die
+// Fahrlehrperson bzw. der Prüfer **beauftragen, aber nicht helfen**. Ein
+// „Schulterblick!" zur richtigen Sekunde nimmt dem Prüfling genau die
+// Leistung ab, die geprüft wird. Der Prüfungsmodus blendet deshalb alles
+// Helfende aus – und zwar wirklich aus dem Bild, nicht nur ausgegraut, damit
+// niemand versehentlich danach greift.
 
-/// Kategorien eines Modus in Enum-Reihenfolge.
-List<CommandCategory> categoriesInMode(DashboardMode m) =>
-    CommandCategory.values.where((c) => c.mode == m).toList();
+/// Kategorien, die in der Prüfung vollständig entfallen. Bewusst ganze
+/// Kategorien statt Einzelkeys: eine neue „Hinweis"-Kachel ist per Definition
+/// wieder eine Hilfestellung und soll ohne Codeänderung mitgesperrt sein.
+const Set<CommandCategory> kExamHiddenCategories = {
+  CommandCategory.hinweis, // Spiegel, Blinker, Schulterblick, Abstand …
+  CommandCategory.feedback, // Lob und Kritik bewertet der Prüfer, nicht die App
+  CommandCategory.coaching, // Zuspruch ist Beistand, nicht Auftrag
+};
+
+/// Einzelne Hilfestellungen in sonst erlaubten Kategorien.
+const Set<String> kExamHiddenKeys = {
+  // Fahrhilfe statt Fahrauftrag.
+  'langsamer', 'schneller',
+  // Das zulässige Tempo aus den Schildern abzuleiten ist Prüfungsleistung –
+  // die Vorgabe wäre die halbe Antwort.
+  't_schritt', 't_30', 't_50', 't_70', 't_100', 't_frei',
+};
+
+/// Notkommandos. Sie überstimmen jede Sperre: die Fahrlehrperson trägt auch
+/// während der Prüfung die Verantwortung im Auto und muss eingreifen können.
+const Set<String> kExamSafetyKeys = {'bremsen', 'anhalten', 'stopp'};
+
+/// Darf diese Kachel in der Prüfung gezeigt werden?
+bool allowedInExam(CommandDef d) =>
+    kExamSafetyKeys.contains(d.key) ||
+    (!kExamHiddenCategories.contains(d.category) &&
+        !kExamHiddenKeys.contains(d.key));
+
+/// Wie [allowedInExam], aber für einen Key. Keys ohne Katalog-Eintrag
+/// (`off`, `freitext`) sind erlaubt.
+bool keyAllowedInExam(String key) {
+  final def = commandByKey(key);
+  return def == null || allowedInExam(def);
+}
+
+/// Darf dieser Befehl im Prüfungsmodus gesendet werden? Betrifft vor allem
+/// die Sprachleiste, die den Katalog an den Kacheln vorbei erreicht.
+///
+/// Ein gemischter Satz („links und Schulterblick") geht **ganz** nicht raus,
+/// statt still beschnitten zu werden – lieber neu sprechen als heimlich etwas
+/// anderes senden. Ausnahme ist wieder die Sicherheit: steckt ein Notkommando
+/// darin, geht der Befehl unverändert raus.
+bool commandAllowedInExam(DriveCommand c) =>
+    c.isFreitext ||
+    c.keys.any(kExamSafetyKeys.contains) ||
+    c.keys.every(keyAllowedInExam);
+
+/// Kommandos einer Kategorie in Katalog-Reihenfolge.
+List<CommandDef> commandsInCategory(CommandCategory c, {bool exam = false}) =>
+    kCommandCatalog
+        .where((d) => d.category == c && (!exam || allowedInExam(d)))
+        .toList();
+
+/// Kategorien eines Modus in Enum-Reihenfolge. Im Prüfungsmodus fallen
+/// Kategorien weg, von denen nichts übrig bleibt.
+List<CommandCategory> categoriesInMode(DashboardMode m, {bool exam = false}) =>
+    CommandCategory.values
+        .where(
+          (c) =>
+              c.mode == m &&
+              (!exam || commandsInCategory(c, exam: true).isNotEmpty),
+        )
+        .toList();
+
+/// Bereiche, die überhaupt etwas zu zeigen haben – im Prüfungsmodus kann ein
+/// Bereich leer laufen, dann gehört er nicht in den Umschalter.
+List<DashboardMode> modesWithContent({bool exam = false}) => DashboardMode
+    .values
+    .where((m) => categoriesInMode(m, exam: exam).isNotEmpty)
+    .toList();
 
 /// Beschriftung eines Kommandos **inklusive Ordnungszahl**.
 ///
