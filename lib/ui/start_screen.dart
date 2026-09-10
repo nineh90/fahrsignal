@@ -16,7 +16,11 @@ class StartScreen extends ConsumerStatefulWidget {
 }
 
 class _StartScreenState extends ConsumerState<StartScreen> {
-  final _controller = TextEditingController(text: 'DEV');
+  // Bewusst leer: der Raumcode wird auf beiden Geräten von Hand eingegeben.
+  // Ein vorbelegtes "DEV" stand hier aus der Entwicklungszeit und war für
+  // Sarah eine Falle – wer es stehenlässt, landet im Raum "DEV" statt im
+  // eigenen. Der Dev-Harness braucht das Feld nicht, er setzt den Raum selbst.
+  final _controller = TextEditingController();
 
   @override
   void dispose() {
