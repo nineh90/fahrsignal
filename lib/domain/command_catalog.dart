@@ -10,10 +10,17 @@ Color urgencyColor(Urgency u) => switch (u) {
   Urgency.dringend => const Color(0xFFC62828),
 };
 
-/// Kontrastreiche Textfarbe auf der jeweiligen Urgency-Fläche.
-/// Gelb braucht dunklen Text, Blau/Rot hellen.
-Color urgencyForeground(Urgency u) =>
-    u == Urgency.achtung ? const Color(0xFF111417) : Colors.white;
+/// Kontrastreiche Textfarbe auf einer gefüllten Fläche – aus deren Helligkeit,
+/// nicht aus der Urgency: die Fläche trägt seit SAR-86 die Kategoriefarbe der
+/// Kachel, und die kann hell sein (Gelb bei Beleuchtung, Cyan bei Coaching).
+///
+/// Die Schwelle ist an den Kontrastwerten der Katalogfarben abgeglichen, nicht
+/// gewürfelt: bei 0,30 liegt jede Kombination bei mindestens 3:1 (Gelb 9,4:1
+/// und Cyan 6,8:1 mit dunklem Text, alles Dunklere ab 3,1:1 mit weißem). Eine
+/// reine WCAG-Optimierung würde auch auf Blau und Rot dunklen Text setzen –
+/// das wäre kontrastreicher, sieht aber nicht mehr nach Anweisung aus.
+Color foregroundOn(Color bg) =>
+    bg.computeLuminance() > 0.30 ? const Color(0xFF111417) : Colors.white;
 
 /// Höchste (dringendste) Urgency einer Kombination.
 Urgency maxUrgency(Iterable<Urgency> us) =>
@@ -1254,9 +1261,18 @@ String displayLabel(DriveCommand c) {
 /// Positives Lob (Empfänger wird grün statt urgency-farbig).
 bool isPositiveFeedback(String key) => key == 'lob' || key == 'perfekt';
 
-/// Farbe der Sender-Kachel. Rückmeldung nutzt Ton-Farbe (grün/orange) statt
-/// der Kategoriefarbe, damit Lob und Kritik sofort unterscheidbar sind.
+/// Farbe der Sender-Kachel – und über [commandColor] auch die Vollfläche beim
+/// Fahrschüler. **Eine Quelle für beide Ansichten** (SAR-86).
+///
+/// Rückmeldung nutzt Ton-Farbe (grün/orange) statt der Kategoriefarbe, damit
+/// Lob und Kritik sofort unterscheidbar sind.
 Color tileColor(CommandDef d) {
+  // Notkommandos tragen das Dringend-Rot statt der Farbe ihrer Kategorie.
+  // „Stop" und „Anhalten" stehen aus Ordnungsgründen unter „Hinweise", und die
+  // Kategorie ist grün. Auf der Kachel fiele das kaum auf – beim Fahrschüler
+  // füllt die Farbe den ganzen Schirm, und ein grün leuchtender Not-Stop ist
+  // das Gegenteil der Botschaft. Deshalb rot, und zwar auf beiden Seiten.
+  if (kExamSafetyKeys.contains(d.key)) return urgencyColor(Urgency.dringend);
   if (d.category == CommandCategory.feedback) {
     return isPositiveFeedback(d.key)
         ? const Color(0xFF2E9E44)
@@ -1265,11 +1281,21 @@ Color tileColor(CommandDef d) {
   return d.category.color;
 }
 
-/// Vollflächen-Hintergrund der Empfängeranzeige (positives Lob = grün).
-Color commandColor(DriveCommand c) => isPositiveFeedback(c.key)
-    ? const Color(0xFF2E9E44)
-    : urgencyColor(c.urgency);
+/// Vollflächen-Hintergrund der Empfängeranzeige: **dieselbe Farbe, die die
+/// Kachel beim Fahrlehrer trägt** (SAR-86). Der Schüler sieht die Anweisung
+/// damit in der Farbe, in der sie abgeschickt wurde.
+Color commandColor(DriveCommand c) {
+  // Sicherheitsboden vor der Kachelfarbe: alles Dringende bleibt rot. Das
+  // greift dort, wo die Kachelfarbe die Lage untertreiben würde – bei einer
+  // Kombination, deren *primäres* Kommando harmlos ist („links und bremsen"
+  // liefert `key == 'links'`), und bei Freitext ohne Katalog-Eintrag.
+  if (c.urgency == Urgency.dringend || c.keys.any(kExamSafetyKeys.contains)) {
+    return urgencyColor(Urgency.dringend);
+  }
+  final def = commandByKey(c.key);
+  // Kein Katalog-Eintrag (Freitext, 'off'): zurück auf die Urgency-Farbe.
+  return def != null ? tileColor(def) : urgencyColor(c.urgency);
+}
 
 /// Passende Vordergrundfarbe zu [commandColor].
-Color commandForeground(DriveCommand c) =>
-    isPositiveFeedback(c.key) ? Colors.white : urgencyForeground(c.urgency);
+Color commandForeground(DriveCommand c) => foregroundOn(commandColor(c));
