@@ -154,6 +154,13 @@ const Map<String, List<String>> kCommandPhrases = {
     '4 bis 7',
   ],
   't_30': ['tempo 30', '30', '30 fahren'],
+  't_zone20': [
+    '20er zone',
+    'zwanziger zone',
+    'zone 20',
+    'tempo 20 zone',
+    'zone zwanzig',
+  ],
   't_zone30': [
     '30er zone',
     'dreissiger zone',

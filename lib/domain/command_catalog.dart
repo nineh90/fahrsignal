@@ -192,6 +192,12 @@ class CommandDef {
   /// Der Empfänger zeigt immer das volle [label].
   final String tileLabel;
 
+  /// Die Sender-Kachel zeigt nur das Schild, kein Wort darunter (SAR-119).
+  /// Nur dort, wo das Zeichen die Anweisung selbst ausschreibt („30", „20
+  /// Zone") – der Empfänger und die Liste „Kacheln anpassen" zeigen das
+  /// [label] trotzdem.
+  final bool signOnly;
+
   /// Kommandos mit gleichem, nicht-leerem Gruppennamen stehen im Sender in
   /// **einer** Zeile nebeneinander (z. B. die drei Kreisverkehr-Ausfahrten).
   final String group;
@@ -208,6 +214,7 @@ class CommandDef {
     this.vz = '',
     this.tileLabel = '',
     this.group = '',
+    this.signOnly = false,
   });
 
   bool get hasExplanation => explanation.isNotEmpty;
@@ -448,8 +455,32 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
     // VZ 325.1: das Spielstraßen-Schild *ist* die Anweisung „Schritttempo" –
     // eine Zahl im Verbotszeichen (4–7 km/h) steht so an keiner Straße.
+    // Mit Wort: die Zahl steht eben nicht darauf.
     vz: '325-1',
   ),
+  // Zonenschilder statt Einzelanordnung: VZ 274.1 gilt bis zum Ende der Zone
+  // und ist damit eine andere Ansage als das Tempolimit an einer Stelle.
+  CommandDef(
+    't_zone20',
+    '20er Zone',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    // VZ 274.1-20 (verkehrsberuhigter Geschäftsbereich)
+    vz: '274-1-20',
+    signOnly: true,
+  ),
+  CommandDef(
+    't_zone30',
+    '30er Zone',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    vz: '274-1',
+    signOnly: true,
+  ),
+  // Die Limits stehen als eine Zeile hintereinander (SAR-119) – aufsteigend
+  // bis zur Aufhebung, so wie man sie beim Hinausfahren nacheinander braucht.
   CommandDef(
     't_30',
     'Tempo 30',
@@ -458,16 +489,8 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
     sign: SignShape.limit,
     signText: '30',
-  ),
-  // Zonenschild statt Einzelanordnung: VZ 274.1 gilt bis zum Ende der Zone
-  // und ist damit eine andere Ansage als das Tempolimit an einer Stelle.
-  CommandDef(
-    't_zone30',
-    '30er Zone',
-    Icons.speed,
-    Urgency.info,
-    CommandCategory.tempo,
-    vz: '274-1',
+    group: 'tempolimit',
+    signOnly: true,
   ),
   CommandDef(
     't_50',
@@ -477,6 +500,8 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
     sign: SignShape.limit,
     signText: '50',
+    group: 'tempolimit',
+    signOnly: true,
   ),
   CommandDef(
     't_70',
@@ -486,6 +511,8 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
     sign: SignShape.limit,
     signText: '70',
+    group: 'tempolimit',
+    signOnly: true,
   ),
   CommandDef(
     't_100',
@@ -495,6 +522,8 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
     sign: SignShape.limit,
     signText: '100',
+    group: 'tempolimit',
+    signOnly: true,
   ),
   CommandDef(
     't_frei',
@@ -503,6 +532,8 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.tempo,
     sign: SignShape.ende,
+    group: 'tempolimit',
+    signOnly: true,
   ),
 
   // --- Hinweise ---
@@ -1195,7 +1226,8 @@ const Set<String> kExamHiddenKeys = {
   'langsamer', 'schneller',
   // Das zulässige Tempo aus den Schildern abzuleiten ist Prüfungsleistung –
   // die Vorgabe wäre die halbe Antwort.
-  't_schritt', 't_30', 't_zone30', 't_50', 't_70', 't_100', 't_frei',
+  't_schritt', 't_zone20', 't_zone30', 't_30', 't_50', 't_70', 't_100',
+  't_frei',
 };
 
 /// Notkommandos. Sie überstimmen jede Sperre: die Fahrlehrperson trägt auch

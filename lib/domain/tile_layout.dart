@@ -10,6 +10,8 @@ const Set<String> kDefaultHiddenKeys = {
   'einordnen',
   'einordnen_rechts',
   'rueckwaerts',
+  // SAR-119: Halten fliegt aus dem Tempo-Bereich.
+  'parken',
 };
 
 /// Die eigene Anordnung des Fahrlehrers: Reihenfolge je Kategorie und welche

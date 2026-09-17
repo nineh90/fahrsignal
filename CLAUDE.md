@@ -133,7 +133,7 @@ steht „Hell/Dunkel" jetzt auch – der Header war auf dem Handy voll.
 - **Gespeichert auf dem Gerät** (`shared_preferences`, im Browser localStorage) unter
   `tile_layout_v1`. Keine Konten → jedes Tablet hat seine eigene Anordnung.
 - **Ausgeblendet ist nicht gelöscht.** Standardmäßig aus (`kDefaultHiddenKeys`):
-  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts. Die
+  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts, Halten. Die
   Sprachleiste erkennt sie weiter, der Schüler sieht weiter ihr Zeichen.
 - **Notkommandos (`kExamSafetyKeys`) lassen sich nicht ausblenden** – Schalter gesperrt.
 - Neue Katalog-Kacheln erscheinen auch bei gespeicherter Anordnung von selbst, hinter
@@ -296,7 +296,7 @@ Die Dateien in `assets/signs/` sind die amtlichen Zeichen von Wikimedia Commons;
 StVO-Zeichen sind als amtliche Werke (§ 5 UrhG) gemeinfrei, die konkreten SVGs stehen
 dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 `sodipodi:namedview` entfernt – sonst schreibt `flutter_svg` bei jedem Aufbau
-„unhandled element" ins Log. Zusammen wiegen alle neun ~34 kB.
+„unhandled element" ins Log. Zusammen wiegen alle vierzehn ~56 kB.
 
 | Kommando | Zeichen |
 |---|---|
@@ -307,12 +307,19 @@ dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 | Ampel | VZ 131 |
 | Vorfahrt gewähren | VZ 205 |
 | Vorfahrtstraße | VZ 306 |
-| Halten | VZ 314 (Parken) |
+| Halten | VZ 314 (Parken) – seit SAR-119 standardmäßig ausgeblendet |
 | Stop | VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft |
 | Schritttempo | VZ 325.1 – das Spielstraßen-Schild *ist* die Anweisung; eine Zahl 4–7 im Verbotszeichen steht so an keiner Straße |
 | 30er Zone | VZ 274.1 – gilt bis zum Zonenende und ist damit eine andere Ansage als ein Limit an einer Stelle |
+| 20er Zone | VZ 274.1-20 (verkehrsberuhigter Geschäftsbereich) → `vz274-1-20.svg` |
 | Tempo 30/50/70/100 | VZ 274, **gezeichnet** (`SignShape.limit`) |
 | Unbegrenzt | VZ 282, gezeichnet (`SignShape.ende`) |
+
+**Kacheln ohne Wort (SAR-119):** `signOnly: true` am Katalogeintrag – die Sender-Kachel
+zeigt dann nur das Schild, größer (`_kSignOnlySize`), mit dem `label` als Screenreader-Name.
+Nur wo das Schild die Anweisung selbst ausschreibt: Tempo 30/50/70/100, Unbegrenzt,
+20er/30er Zone. Schritttempo, Langsamer, Schneller, Bremsen behalten ihr Wort. Die
+Limits stehen als Gruppe `tempolimit` in einer Zeile hintereinander.
 
 Die Zuordnung steht als Nummer am Katalogeintrag (`vz: '209-10'` → `assets/signs/vz209-10.svg`),
 nicht in der UI. `test/traffic_sign_test.dart` hält Zuordnung und Dateien zusammen: ein

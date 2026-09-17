@@ -416,6 +416,9 @@ const double _kTileMaxWidth = 118;
 const double _kTileHeight = 100;
 const double _kTileGap = 10;
 
+/// Schildgröße auf Kacheln ohne Wort (`CommandDef.signOnly`).
+const double _kSignOnlySize = 64;
+
 /// Spaltenzahl und daraus die Kachelbreite – dieselbe Rechnung wie in
 /// `SliverGridDelegateWithMaxCrossAxisExtent`, nur selbst gemacht, damit
 /// Gruppenzeilen exakt dasselbe Maß verwenden können.
@@ -576,30 +579,48 @@ class _CommandTile extends StatelessWidget {
         // raus: die Dringlichkeit steht der Fahrlehrperson schon in der
         // Kachelfarbe und im Schild selbst gegenüber – auf dem Empfängerschirm
         // trägt sie ohnehin die Vollfläche.
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TrafficSign(def: def, size: 42),
-                const SizedBox(height: 6),
-                Text(
-                  def.tileText,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.5,
-                    height: 1.05,
-                    fontWeight: FontWeight.w600,
+        child: def.signOnly
+            // Nur das Schild (SAR-119): es schreibt die Anweisung selbst aus
+            // und darf dafür den Platz des Worts mitnutzen. In einer
+            // schmalen Gruppenzeile (Handy) schrumpft es mit der Kachel.
+            ? Semantics(
+                label: def.label,
+                child: LayoutBuilder(
+                  builder: (context, c) => Center(
+                    child: TrafficSign(
+                      def: def,
+                      size: math.min(_kSignOnlySize, c.maxWidth - 18),
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              )
+            : Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TrafficSign(def: def, size: 42),
+                      const SizedBox(height: 6),
+                      Text(
+                        def.tileText,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          height: 1.05,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
       ),
     );
   }
