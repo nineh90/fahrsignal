@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/command_catalog.dart';
 import '../domain/drive_command.dart';
+import '../domain/voice_phrases.dart';
 import '../providers.dart';
 import '../transport/signal_transport.dart';
 import 'brand.dart';
@@ -31,9 +32,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
   void _tap(CommandDef d) {
     // Im Prüfungsmodus wird nur abgefragt, nie erklärt.
     final ask = (_ask || ref.read(examModeProvider)) && d.hasExplanation;
-    ref
-        .read(transportProvider)
-        .sendCommand(DriveCommand.now(d.key, d.urgency, ask: ask));
+    ref.sendCommand(DriveCommand.now(d.key, d.urgency, ask: ask));
   }
 
   Future<void> _composeFreitext() async {
@@ -66,7 +65,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
     );
     controller.dispose();
     if (text != null && text.trim().isNotEmpty) {
-      ref.read(transportProvider).sendCommand(DriveCommand.freitext(text));
+      ref.sendCommand(DriveCommand.freitext(text));
     }
   }
 
@@ -114,8 +113,13 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
             // Lenkrad im dunklen Grund.
             const SarahLogo(size: 30, signet: true, onDark: true),
             const SizedBox(width: 10),
-            const Text('Senden'),
-            const SizedBox(width: 10),
+            // Auf dem Handy hochkant fehlt der Platz, seit die Sprachwahl im
+            // Header sitzt. Der Raumcode ist wichtiger als der Titel – dass
+            // hier gesendet wird, zeigt das Kachelraster von selbst.
+            if (MediaQuery.sizeOf(context).width >= 420) ...[
+              const Text('Senden'),
+              const SizedBox(width: 10),
+            ],
             Flexible(child: _RoomBadge(room: room)),
           ],
         ),
@@ -134,6 +138,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
               ),
             ),
           ),
+          const _VoiceMenu(),
           IconButton(
             tooltip: exam ? 'Prüfungsmodus beenden' : 'Prüfungsmodus starten',
             isSelected: exam,
@@ -230,9 +235,87 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
       bottomNavigationBar: _SenderBottomBar(
         askDefault: ask,
         onFreitext: _composeFreitext,
-        onOff: () => ref
-            .read(transportProvider)
-            .sendCommand(DriveCommand.now(kOffKey, Urgency.info)),
+        onOff: () => ref.sendCommand(DriveCommand.now(kOffKey, Urgency.info)),
+      ),
+    );
+  }
+}
+
+/// Sprachausgabe beim Fahrschüler (SAR-121): aus oder eine Sprache.
+/// Im Header, weil es eine Einstellung für die ganze Fahrt ist – wie der
+/// Prüfungsmodus – und nicht zu einer Kachel gehört.
+class _VoiceMenu extends ConsumerWidget {
+  const _VoiceMenu();
+
+  // Ein Popup-Eintrag mit `null` gilt als „abgebrochen" – daher ein
+  // leerer Code für „aus".
+  static const _off = '';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lang = ref.watch(voiceLanguageProvider);
+    return PopupMenuButton<String>(
+      tooltip: lang == null
+          ? 'Sprachausgabe beim Fahrschüler: aus'
+          : 'Sprachausgabe beim Fahrschüler: ${lang.nativeName}',
+      initialValue: lang?.code ?? _off,
+      onSelected: (code) {
+        ref
+            .read(voiceLanguageProvider.notifier)
+            .set(VoiceLanguage.byCode(code));
+        final picked = VoiceLanguage.byCode(code);
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 3),
+              content: Text(
+                picked == null
+                    ? 'Sprachausgabe aus – der Fahrschüler sieht nur.'
+                    : 'Anweisungen werden beim Fahrschüler auf '
+                          '${picked.nativeName} vorgelesen.',
+              ),
+            ),
+          );
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: _off,
+          child: ListTile(leading: Icon(Icons.volume_off), title: Text('Aus')),
+        ),
+        const PopupMenuDivider(),
+        for (final l in VoiceLanguage.values)
+          PopupMenuItem(
+            value: l.code,
+            child: ListTile(
+              leading: const Icon(Icons.record_voice_over),
+              title: Text(l.nativeName),
+              trailing: Text(l.code.toUpperCase()),
+            ),
+          ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              lang == null ? Icons.volume_off : Icons.volume_up,
+              color: lang == null ? null : const Color(0xFFFFC46B),
+            ),
+            if (lang != null) ...[
+              const SizedBox(width: 3),
+              Text(
+                lang.code.toUpperCase(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  color: Color(0xFFFFC46B),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

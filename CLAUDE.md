@@ -121,6 +121,33 @@ Was daran nicht verhandelbar ist:
 Der Modus ist reiner Senderzustand – der Empfänger zeigt ohnehin nur, was ankommt.
 `test/exam_mode_test.dart` hält die Grenze fest.
 
+### Sprachausgabe (SAR-121)
+
+Der Empfänger kann jede Anweisung vorlesen. **Der Fahrlehrer entscheidet**: Lautsprecher-
+Menü im Sender-Header (`voiceLanguageProvider`), aus oder eine von sechs Sprachen
+(de, en, tr, ar, uk, ru). **Standard aus** – für gehörlose Fahrschüler hört sonst nur die
+Fahrlehrperson ihr eigenes Kommando ein zweites Mal. Das Schülergerät hat keinen Schalter.
+
+- **Die Wahl reist mit jeder Anweisung** (`DriveCommand.voice`, Protokoll v5) statt als
+  eigener Zustand – nach einem Verbindungsabbruch gibt es nichts nachzuholen. Alle Sender-
+  Wege laufen über `ref.sendCommand(...)` (Extension in `providers.dart`), das die Wahl
+  anhängt; **nie direkt `transportProvider.sendCommand` aus der Sender-UI**.
+- **Nur die Stimme wird übersetzt**, der Schirm bleibt deutsch mit Verkehrszeichen.
+  Übersetzungen: `domain/voice_phrases.dart`; der Test verlangt jede Kachel in jeder
+  Sprache. Neue Kachel → dort fünf Zeilen ergänzen.
+- **Rückfall Deutsch**: Freitext (nicht übersetzbar), unbekannter Code und ein Gerät ohne
+  Stimme für die Sprache sprechen den deutschen Text. Chrome am Desktop hat z. B. keine
+  türkische, arabische oder ukrainische Stimme (Stand 17.09.2026).
+- Jede neue Anweisung unterbricht die laufende; `off` und stumme Anweisungen brechen ab.
+- `SpeechOutput` (`platform/speech/`) kapselt die Stimme:
+  - **Web: eigene Umsetzung gegen `speechSynthesis`** (`speech_output_web.dart`).
+    `flutter_tts` verwirft im Browser eine Ansage, die direkt nach einem Abbruch kommt.
+  - **App: `flutter_tts`** mit Navigations-Audioprofil (iOS `voicePrompt`, Android
+    `setAudioAttributesForNavigation`) → läuft über Bluetooth/CarPlay-Audio mit.
+  - Eine KI-Stimme wäre eine weitere Implementierung.
+- **iPhone-Safari spricht nur nach einer Nutzergeste** – deshalb gibt der Tipp auf
+  „Empfangen" die Ausgabe mit einer stummen Leer-Ansage frei (`prime()`).
+
 ### Empfohlene Struktur
 ```
 lib/

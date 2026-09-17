@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'domain/drive_command.dart';
+import 'domain/voice_phrases.dart';
 import 'platform/speech/fake_speech_recognizer.dart';
+import 'platform/speech/speech_output.dart';
 import 'platform/speech/speech_recognizer.dart';
 import 'transport/signal_transport.dart';
 import 'transport/fake_transport.dart';
@@ -89,6 +91,39 @@ final speechRecognizerProvider = Provider<SpeechRecognizer>((ref) {
   ref.onDispose(r.dispose);
   return r;
 });
+
+/// Sprachausgabe beim Fahrschüler (SAR-121): gewählte Sprache oder `null`
+/// für stumm. **Stellt der Fahrlehrer ein** – jede Anweisung trägt die Wahl
+/// mit (`DriveCommand.voice`), das Schülergerät hat keinen eigenen Schalter.
+/// Standard: stumm. FahrSignal ist für gehörlose Fahrschüler gebaut; dort
+/// hörte nur die Fahrlehrperson ihr eigenes Kommando ein zweites Mal.
+class VoiceLanguageNotifier extends Notifier<VoiceLanguage?> {
+  @override
+  VoiceLanguage? build() => null;
+
+  void set(VoiceLanguage? lang) => state = lang;
+}
+
+final voiceLanguageProvider =
+    NotifierProvider<VoiceLanguageNotifier, VoiceLanguage?>(
+      VoiceLanguageNotifier.new,
+    );
+
+/// Die Stimme auf dem Schülergerät. In Tests per `overrideWithValue` ersetzbar.
+final speechOutputProvider = Provider<SpeechOutput>((ref) {
+  final s = createSpeechOutput();
+  ref.onDispose(s.dispose);
+  return s;
+});
+
+/// Senden vom Fahrlehrergerät: **der eine Weg**, auf dem eine Anweisung
+/// hinausgeht – er hängt die gewählte Sprachausgabe an. Kacheln, Freitext
+/// und Sprachleiste gehen alle hier durch.
+extension SendCommand on WidgetRef {
+  Future<void> sendCommand(DriveCommand cmd) => read(
+    transportProvider,
+  ).sendCommand(cmd.withVoice(read(voiceLanguageProvider)?.code ?? ''));
+}
 
 /// Strom eingehender Kommandos (Empfängerseite).
 final commandStreamProvider = StreamProvider<DriveCommand>((ref) {

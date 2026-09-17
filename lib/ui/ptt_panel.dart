@@ -203,7 +203,7 @@ class _PttBarState extends ConsumerState<PttBar> {
     _lastSentSignature = signature;
     _lastSentAt = now;
 
-    ref.read(transportProvider).sendCommand(cmd);
+    ref.sendCommand(cmd);
 
     _flashTimer?.cancel();
     setState(() {

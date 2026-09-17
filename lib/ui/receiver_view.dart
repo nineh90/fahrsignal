@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/command_catalog.dart';
 import '../domain/drive_command.dart';
+import '../domain/spoken_text.dart';
 import '../providers.dart';
 import '../transport/signal_transport.dart';
 import '../platform/keep_awake.dart';
@@ -60,6 +61,7 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
       }
     });
     if (!cmd.isOff) _pop.forward(from: 0);
+    _speak(cmd);
 
     // Gefahr-Puls nur bei „dringend".
     if (!cmd.isOff && cmd.urgency == Urgency.dringend) {
@@ -67,6 +69,19 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
     } else {
       _pulse.stop();
       _pulse.value = 0;
+    }
+  }
+
+  /// Sprachausgabe (SAR-121), wenn der Fahrlehrer eine Sprache gewählt hat.
+  /// Alles andere – auch 'off' – bricht eine laufende Ansage ab: was nicht
+  /// mehr auf dem Schirm steht, soll auch nicht mehr im Ohr sein.
+  void _speak(DriveCommand cmd) {
+    final voice = ref.read(speechOutputProvider);
+    final a = announcementFor(cmd);
+    if (a == null) {
+      voice.stop();
+    } else {
+      voice.speak(a.say, fallback: a.fallback, urgency: cmd.urgency);
     }
   }
 

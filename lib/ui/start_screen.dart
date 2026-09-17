@@ -37,6 +37,9 @@ class _StartScreenState extends ConsumerState<StartScreen> {
       return;
     }
     ref.read(roomCodeProvider.notifier).set(code);
+    // Ob gesprochen wird, entscheidet später der Fahrlehrer. Freigeben muss
+    // die Ausgabe aber dieser Tipp – Safari auf dem iPhone spricht sonst nie.
+    if (role == Role.receiver) ref.read(speechOutputProvider).prime();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>

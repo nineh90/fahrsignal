@@ -12,7 +12,8 @@ const String kFreitextKey = 'freitext';
 
 /// Aktuelle Protokollversion des Nachrichtenmodells.
 /// v4: Ordinal-Feld `ord` ergänzt („zweite Straße links").
-const int kProtocolVersion = 4;
+/// v5: Sprachausgabe `voice` ergänzt (SAR-121).
+const int kProtocolVersion = 5;
 
 /// Eine Fahranweisung. Kann **ein bis drei** Kommandos kombinieren, als
 /// Abfrage (`ask`) oder als **Freitext** (`text`) gesendet werden.
@@ -37,6 +38,11 @@ class DriveCommand {
   /// sondern eine Näherbestimmung des primären Kommandos.
   final int ord;
 
+  /// Sprachausgabe beim Fahrschüler: Sprachcode (`'de'`, `'tr'` …) oder leer
+  /// für stumm. Stellt der **Fahrlehrer** ein; jede Anweisung trägt es mit,
+  /// damit der Empfänger nach einem Verbindungsabbruch nichts nachholen muss.
+  final String voice;
+
   const DriveCommand({
     this.v = kProtocolVersion,
     required this.keys,
@@ -45,6 +51,7 @@ class DriveCommand {
     this.ask = false,
     this.text = '',
     this.ord = 0,
+    this.voice = '',
   });
 
   /// Einzelnes Kommando mit aktuellem Zeitstempel.
@@ -84,6 +91,18 @@ class DriveCommand {
     ts: DateTime.now().millisecondsSinceEpoch,
   );
 
+  /// Dieselbe Anweisung mit anderer Sprachausgabe.
+  DriveCommand withVoice(String voice) => DriveCommand(
+    v: v,
+    keys: keys,
+    urgency: urgency,
+    ts: ts,
+    ask: ask,
+    text: text,
+    ord: ord,
+    voice: voice,
+  );
+
   /// Primärer Kommando-Key (Komfort/Kompatibilität).
   String get key => keys.first;
 
@@ -100,6 +119,7 @@ class DriveCommand {
     if (ask) 'ask': true,
     if (text.isNotEmpty) 'text': text,
     if (ord != 0) 'ord': ord,
+    if (voice.isNotEmpty) 'voice': voice,
   };
 
   factory DriveCommand.fromJson(Map<String, dynamic> j) => DriveCommand(
@@ -111,10 +131,12 @@ class DriveCommand {
     text: (j['text'] as String?) ?? '',
     // Fehlt in v3-Nachrichten – Default 0 hält ältere Sender lesbar.
     ord: (j['ord'] as int?) ?? 0,
+    // Fehlt bis v4 – ältere Sender bleiben stumm.
+    voice: (j['voice'] as String?) ?? '',
   );
 
   @override
   String toString() =>
       'DriveCommand(${keys.join('+')}, ${urgency.name}, '
-      'ask=$ask, ord=$ord, ts=$ts)';
+      'ask=$ask, ord=$ord, voice=$voice, ts=$ts)';
 }
