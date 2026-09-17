@@ -57,7 +57,7 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
       } else {
         _current = cmd;
         _history.insert(0, cmd);
-        if (_history.length > 3) _history.removeLast();
+        if (_history.length > 2) _history.removeLast();
       }
     });
     if (!cmd.isOff) _pop.forward(from: 0);
@@ -85,12 +85,12 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
     }
   }
 
-  /// Die beiden Hinweise **vor** dem aktiven. Das aktive steht groß in der
-  /// Mitte – im Verlauf noch einmal wäre es doppelt. Ist die Anzeige aus,
-  /// sind es die beiden zuletzt gezeigten.
+  /// Der Hinweis **vor** dem aktiven. Das aktive steht groß in der Mitte –
+  /// im Verlauf noch einmal wäre es doppelt. Ist die Anzeige aus, ist es der
+  /// zuletzt gezeigte.
   List<DriveCommand> get _past {
     final skip = _current != null && identical(_history.first, _current);
-    return _history.skip(skip ? 1 : 0).take(2).toList();
+    return _history.skip(skip ? 1 : 0).take(1).toList();
   }
 
   /// Zurück zum Startbildschirm – bewusst mit Rückfrage, damit während der
@@ -141,7 +141,7 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
           Center(
             child: Padding(
               // Unten ist Platz für den Verlauf (_HistoryStrip) reserviert.
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 190),
+              padding: const EdgeInsets.fromLTRB(20, 40, 20, 205),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: AnimatedBuilder(
@@ -511,12 +511,13 @@ class _SecondaryChip extends StatelessWidget {
   }
 }
 
-/// Verlauf unter der Anzeige (SAR-122): die zwei Hinweise **vor** dem
-/// aktiven, als Karten mit dem Schild über dem Wort.
+/// Verlauf unter der Anzeige (SAR-122): der Hinweis **vor** dem aktiven, als
+/// Karte mit dem Schild über dem Wort. Nur einer – zwei waren auf dem Handy
+/// zu klein, um sie aus dem Augenwinkel zu lesen.
 ///
-/// Groß genug, um sie aus dem Augenwinkel zu erkennen – und trotzdem
-/// eindeutig vergangen: Überschrift „ZUVOR", gedämpft, und das Schild bleibt
-/// deutlich kleiner als das aktive in der Mitte (56 gegenüber 150–260).
+/// Trotzdem eindeutig vergangen: Überschrift „ZUVOR", gedämpft, und das
+/// Schild bleibt deutlich kleiner als das aktive in der Mitte (84 gegenüber
+/// 150–260).
 class _HistoryStrip extends StatelessWidget {
   /// Neuester zuerst (links).
   final List<DriveCommand> past;
@@ -534,7 +535,7 @@ class _HistoryStrip extends StatelessWidget {
             'ZUVOR',
             style: TextStyle(
               color: fg.withValues(alpha: 0.7),
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               letterSpacing: 2.5,
             ),
@@ -558,6 +559,8 @@ class _HistoryStrip extends StatelessWidget {
   }
 }
 
+const double _kPastSignSize = 84;
+
 class _HistoryCard extends StatelessWidget {
   final DriveCommand cmd;
   final Color fg;
@@ -567,11 +570,11 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final def = commandByKey(cmd.keys.first);
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 180),
+      constraints: const BoxConstraints(maxWidth: 280),
       child: Opacity(
         opacity: 0.78,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
           decoration: BoxDecoration(
             color: fg.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(16),
@@ -583,12 +586,12 @@ class _HistoryCard extends StatelessWidget {
               // Dasselbe Schild wie groß in der Mitte – der Verlauf spricht
               // dieselbe Bildsprache wie die Anzeige.
               SizedBox(
-                height: 56,
+                height: _kPastSignSize,
                 child: def != null
-                    ? TrafficSign(def: def, size: 56)
-                    : Icon(Icons.chat_bubble_outline, color: fg, size: 44),
+                    ? TrafficSign(def: def, size: _kPastSignSize)
+                    : Icon(Icons.chat_bubble_outline, color: fg, size: 64),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -601,7 +604,7 @@ class _HistoryCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: fg,
-                        fontSize: 16,
+                        fontSize: 21,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -613,7 +616,7 @@ class _HistoryCard extends StatelessWidget {
                         '+${cmd.keys.length - 1}',
                         style: TextStyle(
                           color: fg.withValues(alpha: 0.8),
-                          fontSize: 14,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

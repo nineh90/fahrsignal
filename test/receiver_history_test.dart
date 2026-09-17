@@ -14,9 +14,7 @@ void main() {
 
   // Der Verlauf trägt die Beschriftung in normaler Schreibweise, die große
   // Anzeige in Großbuchstaben – so lassen sich beide auseinanderhalten.
-  testWidgets('Verlauf: nur die zwei vorigen, das aktive steht groß', (
-    tester,
-  ) async {
+  testWidgets('Verlauf: nur der vorige, das aktive steht groß', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -35,27 +33,24 @@ void main() {
     expect(find.text('AMPEL'), findsOneWidget);
     expect(find.text('Ampel'), findsNothing);
     expect(find.text('Geradeaus'), findsOneWidget);
-    expect(find.text('Rechts'), findsOneWidget);
-    expect(find.text('Links'), findsNothing, reason: 'nur zwei');
+    expect(find.text('Rechts'), findsNothing, reason: 'nur einer');
 
     // Größer als früher (12,5), als vergangen gekennzeichnet.
-    expect(tester.widget<Text>(find.text('Rechts')).style!.fontSize, 16);
+    expect(tester.widget<Text>(find.text('Geradeaus')).style!.fontSize, 21);
     expect(find.text('ZUVOR'), findsOneWidget);
 
-    // Anzeige aus: die beiden zuletzt gezeigten bleiben stehen.
+    // Anzeige aus: der zuletzt gezeigte bleibt stehen.
     await senden(tester, kOffKey);
     expect(find.text('Ampel'), findsOneWidget);
-    expect(find.text('Geradeaus'), findsOneWidget);
-    expect(find.text('Rechts'), findsNothing);
+    expect(find.text('Geradeaus'), findsNothing);
     expect(tester.takeException(), isNull);
 
-    // Zwei lange Hinweise: gekürzt, nicht übergelaufen, Schrift bleibt groß.
+    // Langer Hinweis: gekürzt, nicht übergelaufen, Schrift bleibt groß.
     await senden(tester, 'reihenfolge');
-    await senden(tester, 'gfa_ecke');
     await senden(tester, 'links');
     expect(tester.takeException(), isNull);
     final lang = find.textContaining('Innenspiegel');
-    expect(tester.widget<Text>(lang).style!.fontSize, 16);
+    expect(tester.widget<Text>(lang).style!.fontSize, 21);
     expect(tester.getRect(lang).right, lessThanOrEqualTo(390));
   });
 
