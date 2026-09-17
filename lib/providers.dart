@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'domain/drive_command.dart';
+import 'domain/command_catalog.dart';
+import 'domain/tile_layout.dart';
 import 'domain/voice_phrases.dart';
 import 'platform/speech/fake_speech_recognizer.dart';
 import 'platform/speech/speech_output.dart';
@@ -33,6 +38,62 @@ class ExamModeNotifier extends Notifier<bool> {
 
 final examModeProvider = NotifierProvider<ExamModeNotifier, bool>(
   ExamModeNotifier.new,
+);
+
+/// Eigene Kachel-Anordnung des Fahrlehrers (SAR-120). Liegt **auf dem
+/// Gerät** (im Browser: localStorage) – es gibt keine Konten, und das Raster
+/// ist eine Vorliebe dieses Tablets, nichts, was der Schüler braucht.
+///
+/// Startet mit der Standardanordnung und lädt die gespeicherte nach; schlägt
+/// das Laden fehl (privates Fenster, Tests), bleibt es beim Standard.
+class TileLayoutNotifier extends Notifier<TileLayout> {
+  static const _prefsKey = 'tile_layout_v1';
+
+  @override
+  TileLayout build() {
+    _load();
+    return TileLayout.standard;
+  }
+
+  Future<void> _load() async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_prefsKey);
+      if (raw == null) return;
+      final loaded = TileLayout.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+      // Nur übernehmen, wenn seitdem nichts geändert wurde.
+      if (identical(state, TileLayout.standard)) state = loaded;
+    } catch (_) {}
+  }
+
+  Future<void> _save() async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(
+        _prefsKey,
+        jsonEncode(state.toJson()),
+      );
+    } catch (_) {}
+  }
+
+  void reorder(CommandCategory cat, List<String> keys) {
+    state = state.withOrder(cat, keys);
+    _save();
+  }
+
+  void setHidden(String key, bool hide) {
+    state = state.withHidden(key, hide);
+    _save();
+  }
+
+  void reset() {
+    state = const TileLayout();
+    _save();
+  }
+}
+
+final tileLayoutProvider = NotifierProvider<TileLayoutNotifier, TileLayout>(
+  TileLayoutNotifier.new,
 );
 
 /// Aktiver 6-stelliger Raumcode. Im Dev-Harness fix "DEV".

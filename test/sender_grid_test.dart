@@ -96,19 +96,19 @@ void main() {
     await tester.pumpAndSettle();
 
     // Kurzes Wort, schmale Column: genau da klebte der Inhalt am linken
-    // Kachelrand, solange der Stack ihn oben links ausrichtete. „Einordnen"
+    // Kachelrand, solange der Stack ihn oben links ausrichtete. „Straße"
     // trägt ein Icon – „Links" zeigt inzwischen ein Verkehrszeichen.
     final tile = tester.getRect(
       find
-          .ancestor(of: find.text('Einordnen'), matching: find.byType(InkWell))
+          .ancestor(of: find.text('Straße'), matching: find.byType(InkWell))
           .first,
     );
     expect(
-      tester.getRect(find.text('Einordnen')).center.dx,
+      tester.getRect(find.text('Straße')).center.dx,
       closeTo(tile.center.dx, 0.5),
     );
     expect(
-      tester.getRect(find.byIcon(Icons.merge).first).center.dx,
+      tester.getRect(find.byIcon(Icons.add_road).first).center.dx,
       closeTo(tile.center.dx, 0.5),
     );
   });

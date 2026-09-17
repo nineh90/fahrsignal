@@ -9,6 +9,7 @@ import '../providers.dart';
 import '../transport/signal_transport.dart';
 import 'brand.dart';
 import 'ptt_panel.dart';
+import 'tile_editor.dart';
 import 'traffic_signs.dart';
 
 /// Senderansicht (Fahrlehrer:in). Zwei umschaltbare Bereiche (Fahrt /
@@ -98,7 +99,8 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
 
     // Ein Bereich kann im Prüfungsmodus leer laufen (dann fehlt er im
     // Umschalter); stand er gerade offen, auf den ersten verbliebenen wechseln.
-    final modes = modesWithContent(exam: exam);
+    final layout = ref.watch(tileLayoutProvider);
+    final modes = layout.modes(exam: exam);
     final mode = modes.contains(_mode) ? _mode : modes.first;
     // Erklärungen sind Hilfestellung – in der Prüfung wird nur abgefragt.
     final ask = exam || _ask;
@@ -147,14 +149,36 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
             selectedIcon: const Icon(Icons.gavel, color: Color(0xFFFFC46B)),
             onPressed: _toggleExam,
           ),
-          IconButton(
-            tooltip: 'Hell/Dunkel',
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+          // Selten Gebrauchtes im Menü – der Header ist auf dem Handy voll.
+          PopupMenuButton<_MoreAction>(
+            tooltip: 'Mehr',
+            onSelected: (a) => switch (a) {
+              _MoreAction.tiles => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const TileEditor()),
+              ),
+              _MoreAction.theme =>
+                ref.read(themeModeProvider.notifier).toggle(),
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: _MoreAction.tiles,
+                child: ListTile(
+                  leading: Icon(Icons.dashboard_customize),
+                  title: Text('Kacheln anpassen'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _MoreAction.theme,
+                child: ListTile(
+                  leading: Icon(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? Icons.light_mode
+                        : Icons.dark_mode,
+                  ),
+                  title: const Text('Hell/Dunkel'),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 4),
         ],
@@ -225,8 +249,12 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               children: [
-                for (final cat in categoriesInMode(mode, exam: exam))
-                  _CategorySection(cat: cat, exam: exam, onTap: _tap),
+                for (final cat in layout.categoriesIn(mode, exam: exam))
+                  _CategorySection(
+                    cat: cat,
+                    items: layout.visible(cat, exam: exam),
+                    onTap: _tap,
+                  ),
               ],
             ),
           ),
@@ -240,6 +268,8 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
     );
   }
 }
+
+enum _MoreAction { tiles, theme }
 
 /// Sprachausgabe beim Fahrschüler (SAR-121): aus oder eine Sprache.
 /// Im Header, weil es eine Einstellung für die ganze Fahrt ist – wie der
@@ -431,17 +461,18 @@ class _ExamBanner extends StatelessWidget {
 
 class _CategorySection extends StatelessWidget {
   final CommandCategory cat;
-  final bool exam;
+
+  /// Schon angeordnet und gefiltert (Fahrlehrer-Anordnung, Prüfungsmodus).
+  final List<CommandDef> items;
   final void Function(CommandDef) onTap;
   const _CategorySection({
     required this.cat,
-    required this.exam,
+    required this.items,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final items = commandsInCategory(cat, exam: exam);
     return LayoutBuilder(
       builder: (context, c) {
         final width = _tileWidth(c.maxWidth);

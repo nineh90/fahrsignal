@@ -352,6 +352,15 @@ const List<CommandDef> kCommandCatalog = [
     // VZ 131 Lichtzeichenanlage
     vz: '131',
   ),
+  // „Bei der nächsten Straße" – steht beim Fahrlehrer direkt hinter der
+  // Ampel (SAR-120). Kein amtliches Zeichen, deshalb das nachgebaute Gebot.
+  CommandDef(
+    'strasse',
+    'Straße',
+    Icons.add_road,
+    Urgency.info,
+    CommandCategory.richtung,
+  ),
   // Die drei Kreisverkehr-Ausfahrten gehören zusammen und stehen deshalb
   // per `group` immer in einer eigenen Zeile nebeneinander – sonst reißt
   // der Zeilenumbruch sie je nach Displaybreite auseinander.

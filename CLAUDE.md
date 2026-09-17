@@ -121,6 +121,26 @@ Was daran nicht verhandelbar ist:
 Der Modus ist reiner Senderzustand – der Empfänger zeigt ohnehin nur, was ankommt.
 `test/exam_mode_test.dart` hält die Grenze fest.
 
+### Eigene Kachel-Anordnung (SAR-120)
+
+Der Fahrlehrer sortiert sein Raster selbst und blendet Kacheln aus oder ein:
+Menü „⋮" im Sender-Header → **Kacheln anpassen** (`ui/tile_editor.dart`). Dort
+steht „Hell/Dunkel" jetzt auch – der Header war auf dem Handy voll.
+
+- `TileLayout` (`domain/tile_layout.dart`): Reihenfolge je Kategorie + ausgeblendete
+  Keys. Verschoben wird nur **innerhalb** einer Kategorie. Das Raster fragt
+  `layout.visible(cat, exam:)`, nicht mehr direkt `commandsInCategory`.
+- **Gespeichert auf dem Gerät** (`shared_preferences`, im Browser localStorage) unter
+  `tile_layout_v1`. Keine Konten → jedes Tablet hat seine eigene Anordnung.
+- **Ausgeblendet ist nicht gelöscht.** Standardmäßig aus (`kDefaultHiddenKeys`):
+  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts. Die
+  Sprachleiste erkennt sie weiter, der Schüler sieht weiter ihr Zeichen.
+- **Notkommandos (`kExamSafetyKeys`) lassen sich nicht ausblenden** – Schalter gesperrt.
+- Neue Katalog-Kacheln erscheinen auch bei gespeicherter Anordnung von selbst, hinter
+  ihrem Katalog-Vorgänger. Die Katalogposition ist also weiter wichtig („Straße" steht
+  im Katalog hinter „Ampel").
+- Ein Umbau der Standard-Ausblendungen wirkt nur auf Geräten ohne eigene Anordnung.
+
 ### Sprachausgabe (SAR-121)
 
 Der Empfänger kann jede Anweisung vorlesen. **Der Fahrlehrer entscheidet**: Lautsprecher-
