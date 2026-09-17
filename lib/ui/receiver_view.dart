@@ -57,7 +57,7 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
       } else {
         _current = cmd;
         _history.insert(0, cmd);
-        if (_history.length > 6) _history.removeLast();
+        if (_history.length > 3) _history.removeLast();
       }
     });
     if (!cmd.isOff) _pop.forward(from: 0);
@@ -83,6 +83,14 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
     } else {
       voice.speak(a.say, fallback: a.fallback, urgency: cmd.urgency);
     }
+  }
+
+  /// Die beiden Hinweise **vor** dem aktiven. Das aktive steht groß in der
+  /// Mitte – im Verlauf noch einmal wäre es doppelt. Ist die Anzeige aus,
+  /// sind es die beiden zuletzt gezeigten.
+  List<DriveCommand> get _past {
+    final skip = _current != null && identical(_history.first, _current);
+    return _history.skip(skip ? 1 : 0).take(2).toList();
   }
 
   /// Zurück zum Startbildschirm – bewusst mit Rückfrage, damit während der
@@ -132,7 +140,7 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
         children: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 92),
+              padding: const EdgeInsets.fromLTRB(20, 40, 20, 112),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: AnimatedBuilder(
@@ -179,12 +187,12 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
                 ),
               ),
             ),
-          if (_history.isNotEmpty)
+          if (_past.isNotEmpty)
             Positioned(
               left: 0,
               right: 0,
-              bottom: 14,
-              child: _HistoryStrip(history: _history, fg: fg),
+              bottom: 18,
+              child: _HistoryStrip(past: _past, fg: fg),
             ),
           // Dezente Marke oben links (nicht bedienbar).
           Positioned(
@@ -507,25 +515,26 @@ class _SecondaryChip extends StatelessWidget {
 }
 
 class _HistoryStrip extends StatelessWidget {
-  final List<DriveCommand> history;
+  /// Neuester zuerst (links).
+  final List<DriveCommand> past;
   final Color fg;
-  const _HistoryStrip({required this.history, required this.fg});
+  const _HistoryStrip({required this.past, required this.fg});
 
   @override
   Widget build(BuildContext context) {
-    // Die drei JÜNGSTEN Hinweise, neuester zuerst (links). Kein reverse-Scroll –
-    // so sind immer die aktuellsten sichtbar, nicht die vom Fahrtbeginn.
-    // FittedBox stellt sicher, dass alle drei auch auf schmalen Screens passen.
-    final recent = history.take(3).toList();
-    return FittedBox(
-      fit: BoxFit.scaleDown,
+    // Kein Herunterskalieren: die Schrift bleibt groß, ein zu langer
+    // Hinweis wird stattdessen mit „…" gekürzt.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          for (final c in recent)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: _HistoryChip(cmd: c, fg: fg),
+          for (final c in past)
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: _HistoryChip(cmd: c, fg: fg),
+              ),
             ),
         ],
       ),
@@ -542,7 +551,7 @@ class _HistoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final def = commandByKey(cmd.keys.first);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.fromLTRB(10, 8, 18, 8),
       decoration: BoxDecoration(
         color: fg.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
@@ -550,26 +559,35 @@ class _HistoryChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(def?.icon ?? Icons.info, color: fg, size: 17),
-          const SizedBox(width: 6),
-          Text(
-            // Trägt die Ordnungszahl mit: sonst stünden „links" und
-            // „2. Straße links" im Verlauf identisch da.
-            cmd.isFreitext ? cmd.text : displayLabel(cmd),
-            style: TextStyle(
-              color: fg,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
+          // Dasselbe Schild wie groß in der Mitte – der Verlauf spricht
+          // dieselbe Bildsprache wie die Anzeige.
+          if (def != null)
+            TrafficSign(def: def, size: 30)
+          else
+            Icon(Icons.chat_bubble_outline, color: fg, size: 26),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              // Trägt die Ordnungszahl mit: sonst stünden „links" und
+              // „2. Straße links" im Verlauf identisch da.
+              cmd.isFreitext ? cmd.text : displayLabel(cmd),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: fg,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           if (cmd.isCombo)
             Padding(
-              padding: const EdgeInsets.only(left: 4),
+              padding: const EdgeInsets.only(left: 6),
               child: Text(
                 '+${cmd.keys.length - 1}',
                 style: TextStyle(
                   color: fg.withValues(alpha: 0.8),
-                  fontSize: 11,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
