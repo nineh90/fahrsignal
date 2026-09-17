@@ -121,6 +121,18 @@ Was daran nicht verhandelbar ist:
 Der Modus ist reiner Senderzustand – der Empfänger zeigt ohnehin nur, was ankommt.
 `test/exam_mode_test.dart` hält die Grenze fest.
 
+### Spracheingabe auf dem iPhone (SAR-16)
+
+**Safari markiert das Ende einer Äußerung oft gar nicht**: nur Zwischenergebnisse, das
+`end`-Ereignis kommt Sekunden nach dem Loslassen. Früher galt das als „vorläufig" →
+jede Äußerung landete in der Rückfrage, auf dem iPhone musste man alles antippen.
+
+Jetzt (`ui/ptt_panel.dart`, `_settle`): nach dem Loslassen zählt das letzte
+Zwischenergebnis wie ein Endergebnis, sobald es **500 ms ruht** (`_kSettleQuiet`,
+spätestens nach 2 s). Nachbesserungen („zweite Straße" → „… links") setzen die Uhr
+zurück; was danach noch kommt, wird verworfen (kein Doppelsenden).
+`test/ptt_safari_test.dart` spielt das Safari-Verhalten nach.
+
 ### Eigene Kachel-Anordnung (SAR-120)
 
 Der Fahrlehrer sortiert sein Raster selbst und blendet Kacheln aus oder ein:

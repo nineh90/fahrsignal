@@ -31,6 +31,14 @@ class PttBar extends ConsumerStatefulWidget {
   ConsumerState<PttBar> createState() => _PttBarState();
 }
 
+/// So lange muss das letzte Zwischenergebnis nach dem Loslassen ruhen, bevor
+/// es ausgewertet wird. Kurz genug, dass es sich sofort anfühlt; lang genug,
+/// dass Safari das letzte Wort („zweite Straße … links") noch nachliefert.
+const _kSettleQuiet = Duration(milliseconds: 500);
+
+/// Obergrenze nach dem Loslassen, falls die Erkennung weiter nachbessert.
+const _kSettleMax = Duration(milliseconds: 2000);
+
 class _PttBarState extends ConsumerState<PttBar> {
   StreamSubscription<SpeechResult>? _resultSub;
   StreamSubscription<SpeechStatus>? _statusSub;
@@ -54,10 +62,19 @@ class _PttBarState extends ConsumerState<PttBar> {
   String? _notice;
   Timer? _flashTimer;
 
-  /// Kam in diesem Haltevorgang ein Endergebnis an? Safari/Chrome liefern
-  /// bei leiser oder abgebrochener Aufnahme manchmal keines – dann werten
-  /// wir das letzte Zwischenergebnis aus, statt stumm zu bleiben.
+  /// Kam in diesem Haltevorgang ein Endergebnis an?
   bool _gotFinal = false;
+
+  /// Ist dieser Haltevorgang ausgewertet? Danach wird alles verworfen, was
+  /// die Erkennung noch nachliefert – sonst ginge ein Befehl doppelt raus.
+  bool _settled = true;
+
+  /// Nach dem Loslassen: wertet das letzte Zwischenergebnis aus, sobald es
+  /// sich [_kSettleQuiet] lang nicht mehr ändert (SAR-16).
+  Timer? _settleTimer;
+
+  /// Spätestens dann wird ausgewertet, auch wenn Safari noch nachbessert.
+  Timer? _settleDeadline;
 
   @override
   void initState() {
@@ -67,7 +84,8 @@ class _PttBarState extends ConsumerState<PttBar> {
     _statusSub = recognizer.status.listen((s) {
       if (!mounted) return;
       final listening = s == SpeechStatus.listening;
-      if (!listening && !_holding) _handleRecognitionEnd();
+      // Erkennung ist zu Ende – es kommt nichts mehr, sofort auswerten.
+      if (!listening && !_holding) _settle();
       setState(() => _listening = listening);
       // Fehler der Erkennung selbst (Funkloch, Mikrofon weg) blieben bisher
       // unsichtbar: der Knopf ging einfach in den Normalzustand zurück und es
@@ -84,6 +102,8 @@ class _PttBarState extends ConsumerState<PttBar> {
     _resultSub?.cancel();
     _statusSub?.cancel();
     _flashTimer?.cancel();
+    _settleTimer?.cancel();
+    _settleDeadline?.cancel();
     super.dispose();
   }
 
@@ -115,27 +135,40 @@ class _PttBarState extends ConsumerState<PttBar> {
       : intent.alternatives;
 
   void _onResult(SpeechResult r) {
-    if (!mounted) return;
+    if (!mounted || _settled) return;
 
     if (!r.isFinal) {
       setState(() => _interim = r.transcript);
+      // Nach dem Loslassen bessert Safari oft noch das letzte Wort nach –
+      // erst auswerten, wenn es sich beruhigt hat.
+      if (!_holding) _armSettle();
       return;
     }
 
     _gotFinal = true;
     setState(() => _interim = '');
     _handleTranscript(r.hypotheses, r.confidence <= 0 ? 0.9 : r.confidence);
+    // Nach dem Loslassen ist das Endergebnis das letzte Wort.
+    if (!_holding) _finishSettle();
   }
 
-  void _handleTranscript(
-    List<String> hypotheses,
-    double asrConfidence, {
-    bool provisional = false,
-  }) {
+  void _armSettle() {
+    _settleTimer?.cancel();
+    _settleTimer = Timer(_kSettleQuiet, _settle);
+    _settleDeadline ??= Timer(_kSettleMax, _settle);
+  }
+
+  void _finishSettle() {
+    _settled = true;
+    _settleTimer?.cancel();
+    _settleDeadline?.cancel();
+    _settleTimer = _settleDeadline = null;
+  }
+
+  void _handleTranscript(List<String> hypotheses, double asrConfidence) {
     final intent = parseBestOf(
       hypotheses,
       asrConfidence: asrConfidence,
-      provisional: provisional,
       urgencyOf: _urgencyOf,
     );
 
@@ -156,19 +189,27 @@ class _PttBarState extends ConsumerState<PttBar> {
     setState(() => _pending = intent);
   }
 
-  /// Erkennung ist zu Ende (Status idle/error nach dem Loslassen), aber es
-  /// kam kein Endergebnis: letztes Zwischenergebnis auswerten – mit
-  /// gedrückter Konfidenz, sodass es immer in der Rückfrage landet. War gar
-  /// nichts zu hören, kurz Bescheid geben statt stumm zu bleiben.
-  void _handleRecognitionEnd() {
-    if (_gotFinal) return;
-    _gotFinal = true;
+  /// Wertet einen losgelassenen Haltevorgang ab, der kein Endergebnis
+  /// (mehr) bekommen hat (SAR-16).
+  ///
+  /// **Safari auf dem iPhone markiert das Ende oft gar nicht**: es liefert
+  /// nur Zwischenergebnisse und beendet die Erkennung Sekunden später. Wurde
+  /// das früher als „vorläufig" behandelt, landete jede Äußerung in der
+  /// Rückfrage – auf dem iPhone musste man alles antippen, auf Android nie.
+  ///
+  /// Nach dem Loslassen ist das letzte, ruhige Zwischenergebnis aber das
+  /// Gesagte. Es zählt deshalb wie ein Endergebnis: ein sauberer Treffer
+  /// geht sofort raus, alles Unklare weiter in die Rückfrage. War nichts zu
+  /// hören, kurz Bescheid geben statt stumm zu bleiben.
+  void _settle() {
+    if (!mounted || _settled) return;
+    _finishSettle();
     final text = _interim.trim();
     setState(() => _interim = '');
-    if (text.isEmpty) {
+    if (text.isNotEmpty) {
+      _handleTranscript([text], 0.9);
+    } else if (!_gotFinal) {
       _flashNotice('Nichts verstanden – nochmal versuchen');
-    } else {
-      _handleTranscript([text], 0.6, provisional: true);
     }
   }
 
@@ -237,12 +278,16 @@ class _PttBarState extends ConsumerState<PttBar> {
       }
     }
 
+    // Kurz nacheinander gedrückt: die vorige Äußerung erst auswerten,
+    // statt sie mit dem neuen Haltevorgang wegzuwerfen.
+    _settle();
     setState(() {
       _holding = true;
       _pending = null;
       _interim = '';
     });
     _gotFinal = false;
+    _settled = false;
     await recognizer.start();
   }
 
@@ -250,6 +295,9 @@ class _PttBarState extends ConsumerState<PttBar> {
     if (!_holding) return;
     setState(() => _holding = false);
     await ref.read(speechRecognizerProvider).stop();
+    // Nicht auf Safaris Ende warten – das kommt auf dem iPhone oft erst
+    // Sekunden später. Liegt schon etwas vor, auswerten, sobald es ruht.
+    if (mounted && !_settled) _armSettle();
   }
 
   void _showError(String message) {
