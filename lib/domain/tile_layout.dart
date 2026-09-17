@@ -12,6 +12,18 @@ const Set<String> kDefaultHiddenKeys = {
   'rueckwaerts',
   // SAR-119: Halten fliegt aus dem Tempo-Bereich.
   'parken',
+  'reihenfolge',
+};
+
+/// Die Standard-Ausblendungen, die gespeicherte Anordnungen ohne
+/// `seenDefaults` schon kannten (Stand SAR-120).
+const Set<String> _kDefaultsBeforeTracking = {
+  'abbiegen_links',
+  'abbiegen_rechts',
+  'einordnen_links',
+  'einordnen',
+  'einordnen_rechts',
+  'rueckwaerts',
 };
 
 /// Die eigene Anordnung des Fahrlehrers: Reihenfolge je Kategorie und welche
@@ -89,6 +101,7 @@ class TileLayout {
   Map<String, dynamic> toJson() => {
     'order': {for (final e in order.entries) e.key.name: e.value},
     'hidden': hidden.toList(),
+    'seenDefaults': kDefaultHiddenKeys.toList(),
   };
 
   /// Unbekanntes (umbenannte Kategorien, Müll im Speicher) wird übergangen
@@ -107,11 +120,22 @@ class TileLayout {
       }
     }
     final rawHidden = j['hidden'];
+    if (rawHidden is! List) {
+      return TileLayout(order: order);
+    }
+    // Neue Standard-Ausblendungen erreichen auch Geräte mit eigener
+    // Anordnung – aber nur einmal: was der Fahrlehrer danach wieder
+    // einblendet, steht in `seenDefaults` und bleibt sichtbar.
+    final rawSeen = j['seenDefaults'];
+    final seen = rawSeen is List
+        ? rawSeen.whereType<String>().toSet()
+        : _kDefaultsBeforeTracking;
     return TileLayout(
       order: order,
-      hidden: rawHidden is List
-          ? rawHidden.whereType<String>().toSet()
-          : kDefaultHiddenKeys,
+      hidden: {
+        ...rawHidden.whereType<String>(),
+        ...kDefaultHiddenKeys.difference(seen),
+      },
     );
   }
 }

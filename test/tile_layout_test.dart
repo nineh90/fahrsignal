@@ -114,6 +114,28 @@ void main() {
     });
   });
 
+  group('Neue Standard-Ausblendungen', () {
+    TileLayout laden(Map<String, dynamic> j) =>
+        TileLayout.fromJson(jsonDecode(jsonEncode(j)) as Map<String, dynamic>);
+
+    test('erreichen eine alte gespeicherte Anordnung', () {
+      // Gespeichert vor SAR-119: „Rückwärts" wieder eingeblendet.
+      final alt = laden({
+        'order': <String, dynamic>{},
+        'hidden': ['abbiegen_links', 'abbiegen_rechts'],
+      });
+      expect(alt.isHidden('parken'), isTrue);
+      expect(alt.isHidden('reihenfolge'), isTrue);
+      expect(alt.isHidden('rueckwaerts'), isFalse, reason: 'Wahl bleibt');
+    });
+
+    test('wieder Eingeblendetes bleibt eingeblendet', () {
+      final l = TileLayout.standard.withHidden('reihenfolge', false);
+      final back = laden(l.toJson());
+      expect(back.isHidden('reihenfolge'), isFalse);
+    });
+  });
+
   group('Sender', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 

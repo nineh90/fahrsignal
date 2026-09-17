@@ -139,10 +139,10 @@ void main() {
     );
   });
 
-  testWidgets('Kachel zeigt Kurzlabel, Katalog trägt den vollen Text', (
+  testWidgets('„Reihenfolge" ist ausgeblendet, trägt aber ihr Kurzlabel', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -150,16 +150,12 @@ void main() {
       const ProviderScope(child: MaterialApp(home: SenderGrid())),
     );
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
-      find.text('Reihenfolge'),
-      find.byType(ListView),
-      const Offset(0, -120),
-    );
 
-    expect(find.text('Reihenfolge'), findsOneWidget);
-    expect(
-      commandByKey('reihenfolge')!.label,
-      'Blinker – Innenspiegel – Außenspiegel – Schulterblick',
-    );
+    expect(find.text('Reihenfolge'), findsNothing);
+    expect(find.text('Schulterblick'), findsOneWidget);
+    // Wer sie über „Kacheln anpassen" zurückholt, sieht das Kurzlabel.
+    final def = commandByKey('reihenfolge')!;
+    expect(def.tileText, 'Reihenfolge');
+    expect(def.label, 'Blinker – Innenspiegel – Außenspiegel – Schulterblick');
   });
 }
