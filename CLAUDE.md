@@ -133,6 +133,15 @@ spätestens nach 2 s). Nachbesserungen („zweite Straße" → „… links") se
 zurück; was danach noch kommt, wird verworfen (kein Doppelsenden).
 `test/ptt_safari_test.dart` spielt das Safari-Verhalten nach.
 
+**Echtes Push-to-Talk – Loslassen muss immer ankommen:**
+- Die Taste hört auf rohe Zeigerereignisse (`Listener`), nicht auf die Tipp-Erkennung,
+  die auf dem iPhone bei langem Halten abbrechen kann.
+- `_pressed` wird sofort beim Drücken gesetzt. Nimmt der Freigabe-Dialog beim ersten
+  Mal den Finger weg, startet die Erkennung danach **nicht** – vorher hörte das iPhone
+  dann ungefragt weiter, bis man erneut drückte.
+- Web-Erkennung: endet Safari nach `stop()` nicht binnen 1,5 s, wird hart abgebrochen;
+  kam `stop()` vor `onstart`, holt `onstart` den Abbruch nach. Halten ist auf 30 s begrenzt.
+
 ### Eigene Kachel-Anordnung (SAR-120)
 
 Der Fahrlehrer sortiert sein Raster selbst und blendet Kacheln aus oder ein:
@@ -145,13 +154,18 @@ steht „Hell/Dunkel" jetzt auch – der Header war auf dem Handy voll.
 - **Gespeichert auf dem Gerät** (`shared_preferences`, im Browser localStorage) unter
   `tile_layout_v1`. Keine Konten → jedes Tablet hat seine eigene Anordnung.
 - **Ausgeblendet ist nicht gelöscht.** Standardmäßig aus (`kDefaultHiddenKeys`):
-  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts, Halten. Die
+  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts, Halten,
+  Reihenfolge. Die
   Sprachleiste erkennt sie weiter, der Schüler sieht weiter ihr Zeichen.
 - **Notkommandos (`kExamSafetyKeys`) lassen sich nicht ausblenden** – Schalter gesperrt.
 - Neue Katalog-Kacheln erscheinen auch bei gespeicherter Anordnung von selbst, hinter
   ihrem Katalog-Vorgänger. Die Katalogposition ist also weiter wichtig („Straße" steht
   im Katalog hinter „Ampel").
-- Ein Umbau der Standard-Ausblendungen wirkt nur auf Geräten ohne eigene Anordnung.
+- **Neue Standard-Ausblendungen erreichen auch gespeicherte Anordnungen**, genau einmal:
+  gespeichert wird `seenDefaults`; was darin fehlt, blendet `fromJson` aus. Was der
+  Fahrlehrer danach wieder einblendet, bleibt sichtbar. Also: neue Ausblendung = Key in
+  `kDefaultHiddenKeys` ergänzen, sonst nichts. (Alte Stände ohne `seenDefaults` gelten
+  als Stand SAR-120.)
 
 ### Sprachausgabe (SAR-121)
 

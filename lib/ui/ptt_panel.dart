@@ -39,6 +39,9 @@ const _kSettleQuiet = Duration(milliseconds: 500);
 /// Obergrenze nach dem Loslassen, falls die Erkennung weiter nachbessert.
 const _kSettleMax = Duration(milliseconds: 2000);
 
+/// Länger hält niemand für eine Fahranweisung – danach wird beendet.
+const _kMaxHold = Duration(seconds: 30);
+
 class _PttBarState extends ConsumerState<PttBar> {
   StreamSubscription<SpeechResult>? _resultSub;
   StreamSubscription<SpeechStatus>? _statusSub;
@@ -61,6 +64,16 @@ class _PttBarState extends ConsumerState<PttBar> {
   /// Kurzer Hinweis im Halteknopf („Nichts verstanden").
   String? _notice;
   Timer? _flashTimer;
+
+  /// Liegt der Finger gerade auf der Taste? Wird **sofort** beim Drücken
+  /// gesetzt – anders als [_holding], das erst nach der Mikrofonfreigabe
+  /// kommt. Ohne das ging ein Loslassen während des Freigabe-Dialogs
+  /// verloren, und das iPhone hörte danach ungefragt weiter zu.
+  bool _pressed = false;
+
+  /// Obergrenze für einen Haltevorgang – falls ein Loslassen doch einmal
+  /// nicht ankommt, hört die App nicht endlos mit.
+  Timer? _holdLimit;
 
   /// Kam in diesem Haltevorgang ein Endergebnis an?
   bool _gotFinal = false;
@@ -104,6 +117,7 @@ class _PttBarState extends ConsumerState<PttBar> {
     _flashTimer?.cancel();
     _settleTimer?.cancel();
     _settleDeadline?.cancel();
+    _holdLimit?.cancel();
     super.dispose();
   }
 
@@ -257,6 +271,7 @@ class _PttBarState extends ConsumerState<PttBar> {
   }
 
   Future<void> _startHold() async {
+    _pressed = true;
     final recognizer = ref.read(speechRecognizerProvider);
     if (!recognizer.isSupported) {
       _showError(
@@ -276,7 +291,15 @@ class _PttBarState extends ConsumerState<PttBar> {
         _showError(recognizer.lastError);
         return;
       }
+      // Während der Freigabe losgelassen (der Dialog nimmt den Finger
+      // weg): nicht mehr starten – sonst hört die Erkennung zu, obwohl
+      // niemand mehr hält.
+      if (!_pressed) {
+        _flashNotice('Mikrofon frei – jetzt halten und sprechen');
+        return;
+      }
     }
+    if (!_pressed) return;
 
     // Kurz nacheinander gedrückt: die vorige Äußerung erst auswerten,
     // statt sie mit dem neuen Haltevorgang wegzuwerfen.
@@ -288,10 +311,14 @@ class _PttBarState extends ConsumerState<PttBar> {
     });
     _gotFinal = false;
     _settled = false;
+    _holdLimit?.cancel();
+    _holdLimit = Timer(_kMaxHold, _endHold);
     await recognizer.start();
   }
 
   Future<void> _endHold() async {
+    _pressed = false;
+    _holdLimit?.cancel();
     if (!_holding) return;
     setState(() => _holding = false);
     await ref.read(speechRecognizerProvider).stop();
@@ -435,10 +462,14 @@ class _HoldButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Zum Sprechen halten',
-      child: GestureDetector(
-        onTapDown: (_) => onStart(),
-        onTapUp: (_) => onEnd(),
-        onTapCancel: () => onEnd(),
+      // Rohe Zeigerereignisse statt Tipp-Erkennung: ein Tipp kann vom
+      // Gesten-System abgebrochen werden (langes Halten, leichtes Verrutschen
+      // auf dem iPhone) – Finger runter/hoch kommt immer an.
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) => onStart(),
+        onPointerUp: (_) => onEnd(),
+        onPointerCancel: (_) => onEnd(),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           height: 64,

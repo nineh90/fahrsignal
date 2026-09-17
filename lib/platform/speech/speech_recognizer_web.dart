@@ -88,6 +88,12 @@ class WebSpeechRecognizer implements SpeechRecognizer {
 
   _Recognition? _recognition;
   bool _wantListening = false;
+
+  /// Läuft die Erkennung gerade (zwischen `onstart` und `onend`)?
+  bool _running = false;
+
+  /// Bricht hart ab, wenn Safari nach `stop()` nicht von selbst endet.
+  Timer? _stopWatchdog;
   int _restarts = 0;
   String _lastError = '';
 
@@ -119,6 +125,13 @@ class WebSpeechRecognizer implements SpeechRecognizer {
     rec.onerror = ((JSObject event) => _onError(_ErrorEvent._(event))).toJS;
     rec.onend = ((JSObject _) => _onEnd()).toJS;
     rec.onstart = ((JSObject _) {
+      _running = true;
+      // Kam ein stop() dazwischen, bevor die Erkennung wirklich lief,
+      // hat Safari es ignoriert – dann jetzt nachholen.
+      if (!_wantListening) {
+        _abortNow();
+        return;
+      }
       _statusCtrl.add(SpeechStatus.listening);
     }).toJS;
     return rec;
@@ -177,6 +190,7 @@ class WebSpeechRecognizer implements SpeechRecognizer {
   }
 
   void _onEnd() {
+    _running = false;
     // Safari beendet nach kurzer Stille selbst. Solange der Knopf gehalten
     // wird, sofort wieder aufmachen – sonst reißt die Aufnahme mitten im Satz.
     if (_wantListening && _restarts < _maxRestarts) {
@@ -192,7 +206,14 @@ class WebSpeechRecognizer implements SpeechRecognizer {
       return;
     }
     _wantListening = false;
+    _stopWatchdog?.cancel();
     _statusCtrl.add(SpeechStatus.idle);
+  }
+
+  void _abortNow() {
+    try {
+      _recognition?.abort();
+    } catch (_) {}
   }
 
   @override
@@ -245,6 +266,7 @@ class WebSpeechRecognizer implements SpeechRecognizer {
   @override
   Future<void> start({String locale = 'de-DE'}) async {
     if (_recognition == null) return;
+    _stopWatchdog?.cancel();
     _wantListening = true;
     _restarts = 0;
     _lastError = '';
@@ -262,6 +284,16 @@ class WebSpeechRecognizer implements SpeechRecognizer {
     try {
       _recognition?.stop();
     } catch (_) {}
+    // Safari auf dem iPhone endet nach stop() nicht immer – dann hört es
+    // weiter, bis erneut gedrückt wird. Nach kurzer Frist hart abbrechen
+    // und den Status selbst zurücksetzen.
+    _stopWatchdog?.cancel();
+    _stopWatchdog = Timer(const Duration(milliseconds: 1500), () {
+      if (_wantListening) return;
+      if (_running) _abortNow();
+      _running = false;
+      _statusCtrl.add(SpeechStatus.idle);
+    });
   }
 
   @override
@@ -275,6 +307,7 @@ class WebSpeechRecognizer implements SpeechRecognizer {
   @override
   void dispose() {
     _wantListening = false;
+    _stopWatchdog?.cancel();
     try {
       _recognition?.abort();
     } catch (_) {}

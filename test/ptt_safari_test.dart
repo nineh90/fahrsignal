@@ -50,6 +50,7 @@ class _GrantedMic extends MicPermissionNotifier {
 }
 
 void main() {
+  pttMain();
   late _SafariLike rec;
   late List<DriveCommand> gesendet;
 
@@ -156,5 +157,104 @@ void main() {
     // Die Rückfrage zeigt, was gehört wurde.
     expect(find.text('„blinke irgendwas"'), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 3));
+  });
+}
+
+/// Erkennung mit langsamer Mikrofonfreigabe – wie der Dialog auf dem iPhone.
+class _SlowPermission extends _SafariLike {
+  final permission = Completer<bool>();
+  int starts = 0;
+
+  @override
+  Future<bool> warmUp() => permission.future;
+
+  @override
+  Future<void> start({String locale = 'de-DE'}) async {
+    starts++;
+    await super.start(locale: locale);
+  }
+}
+
+class _AskMic extends MicPermissionNotifier {
+  @override
+  bool? build() => null;
+}
+
+void pttMain() {
+  testWidgets('während der Freigabe losgelassen: hört nicht weiter zu', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final rec = _SlowPermission();
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          speechRecognizerProvider.overrideWithValue(rec),
+          micPermissionProvider.overrideWith(_AskMic.new),
+        ],
+        child: const MaterialApp(home: SenderGrid()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final g = await tester.startGesture(
+      tester.getCenter(find.text('Halten & sprechen')),
+    );
+    await tester.pump();
+    // Der Freigabe-Dialog nimmt den Finger weg …
+    await g.up();
+    await tester.pump();
+    // … und erst danach wird freigegeben.
+    rec.permission.complete(true);
+    await tester.pump();
+    await tester.pump();
+
+    expect(rec.starts, 0, reason: 'niemand hält mehr');
+    expect(find.text('Ich höre …'), findsNothing);
+    expect(
+      find.text('Mikrofon frei – jetzt halten und sprechen'),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    // Beim nächsten Halten geht es normal.
+    final g2 = await tester.startGesture(
+      tester.getCenter(find.text('Halten & sprechen')),
+    );
+    await tester.pump();
+    expect(rec.starts, 1);
+    await g2.up();
+    await tester.pumpAndSettle(const Duration(seconds: 3));
+  });
+
+  testWidgets('abgebrochener Zeiger beendet das Zuhören', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final rec = _SafariLike();
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          speechRecognizerProvider.overrideWithValue(rec),
+          micPermissionProvider.overrideWith(_GrantedMic.new),
+        ],
+        child: const MaterialApp(home: SenderGrid()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final g = await tester.startGesture(
+      tester.getCenter(find.text('Halten & sprechen')),
+    );
+    await tester.pump();
+    expect(find.text('Ich höre …'), findsOneWidget);
+    await g.cancel();
+    rec.ended();
+    await tester.pump();
+    expect(find.text('Ich höre …'), findsNothing);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
   });
 }
