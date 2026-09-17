@@ -38,8 +38,9 @@ void main() {
     expect(find.text('Rechts'), findsOneWidget);
     expect(find.text('Links'), findsNothing, reason: 'nur zwei');
 
-    // Größer als vorher (12,5).
-    expect(tester.widget<Text>(find.text('Rechts')).style!.fontSize, 18);
+    // Größer als früher (12,5), als vergangen gekennzeichnet.
+    expect(tester.widget<Text>(find.text('Rechts')).style!.fontSize, 16);
+    expect(find.text('ZUVOR'), findsOneWidget);
 
     // Anzeige aus: die beiden zuletzt gezeigten bleiben stehen.
     await senden(tester, kOffKey);
@@ -54,7 +55,26 @@ void main() {
     await senden(tester, 'links');
     expect(tester.takeException(), isNull);
     final lang = find.textContaining('Innenspiegel');
-    expect(tester.widget<Text>(lang).style!.fontSize, 18);
+    expect(tester.widget<Text>(lang).style!.fontSize, 16);
     expect(tester.getRect(lang).right, lessThanOrEqualTo(390));
+  });
+
+  testWidgets('das Wort unter dem aktiven Schild steht in einer Zeile', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: ReceiverView())),
+    );
+    await senden(tester, 'reihenfolge');
+    final wort = find.textContaining('INNENSPIEGEL');
+    final text = tester.widget<Text>(wort);
+    expect(text.maxLines, 1);
+    // Eine Zeile: nicht höher als die Schriftgröße samt Zeilenhöhe.
+    expect(tester.getSize(wort).height, lessThanOrEqualTo(44 * 1.05 + 1));
+    expect(tester.getRect(wort).width, lessThanOrEqualTo(390 - 40));
+    expect(tester.takeException(), isNull);
   });
 }

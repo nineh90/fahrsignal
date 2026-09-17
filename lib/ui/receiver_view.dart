@@ -140,7 +140,8 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
         children: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 112),
+              // Unten ist Platz für den Verlauf (_HistoryStrip) reserviert.
+              padding: const EdgeInsets.fromLTRB(20, 40, 20, 190),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: AnimatedBuilder(
@@ -232,20 +233,13 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
   }
 }
 
-/// Schriftgröße des großen Worts, gestaffelt nach seiner Länge.
+/// Schriftgröße des Worts unter dem Schild – **eine Zeile** (SAR-122).
 ///
-/// Ein kurzes „LINKS" soll den Schirm füllen; „Blinker – Innenspiegel –
-/// Außenspiegel – Schulterblick" muss umbrechen dürfen und wird dafür kleiner
-/// gesetzt. Feste Stufen statt Auto-Skalierung: so ist dasselbe Kommando
-/// immer gleich groß, egal auf welchem Gerät.
-double _labelSize(String label, {required bool combo}) {
-  if (combo) return 52;
-  final n = label.length;
-  if (n <= 12) return 68;
-  if (n <= 22) return 54;
-  if (n <= 34) return 44;
-  return 38;
-}
+/// Das Schild trägt die Anweisung, das Wort bestätigt sie nur. Vorher stand
+/// „LINKS" in 68 pt und längere Hinweise brachen über drei Zeilen um; jetzt
+/// ist das die Obergrenze, und ein langer Hinweis wird kleiner statt höher.
+const double _kLabelSize = 44;
+const double _kComboLabelSize = 38;
 
 class _CommandDisplay extends StatelessWidget {
   final DriveCommand? cmd;
@@ -319,21 +313,24 @@ class _CommandDisplay extends StatelessWidget {
         // Nur das **Wort** passt sich an, nicht das Zeichen: ohne eigene
         // Begrenzung zog ein langes Label den umgebenden FittedBox zusammen
         // und das Schild wurde nebenbei halb so groß wie bei „LINKS" –
-        // gleiche Anzeige, zwei Größen. Der Text bricht in fester Breite um
-        // und wird dafür gestaffelt kleiner gesetzt.
+        // gleiche Anzeige, zwei Größen. Das Wort steht deshalb in eigener,
+        // fester Breite – in einer Zeile, bei Überlänge verkleinert.
         SizedBox(
           width: MediaQuery.sizeOf(context).width - 40,
-          child: Text(
-            displayLabel(c).toUpperCase(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: fg,
-              fontSize: _labelSize(
-                displayLabel(c),
-                combo: secondaries.isNotEmpty,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              displayLabel(c).toUpperCase(),
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: fg,
+                fontSize: secondaries.isNotEmpty
+                    ? _kComboLabelSize
+                    : _kLabelSize,
+                fontWeight: FontWeight.bold,
+                height: 1.05,
               ),
-              fontWeight: FontWeight.bold,
-              height: 1.03,
             ),
           ),
         ),
@@ -514,6 +511,12 @@ class _SecondaryChip extends StatelessWidget {
   }
 }
 
+/// Verlauf unter der Anzeige (SAR-122): die zwei Hinweise **vor** dem
+/// aktiven, als Karten mit dem Schild über dem Wort.
+///
+/// Groß genug, um sie aus dem Augenwinkel zu erkennen – und trotzdem
+/// eindeutig vergangen: Überschrift „ZUVOR", gedämpft, und das Schild bleibt
+/// deutlich kleiner als das aktive in der Mitte (56 gegenüber 150–260).
 class _HistoryStrip extends StatelessWidget {
   /// Neuester zuerst (links).
   final List<DriveCommand> past;
@@ -522,77 +525,104 @@ class _HistoryStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kein Herunterskalieren: die Schrift bleibt groß, ein zu langer
-    // Hinweis wird stattdessen mit „…" gekürzt.
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final c in past)
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                child: _HistoryChip(cmd: c, fg: fg),
-              ),
+          Text(
+            'ZUVOR',
+            style: TextStyle(
+              color: fg.withValues(alpha: 0.7),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.5,
             ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (final c in past)
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    child: _HistoryCard(cmd: c, fg: fg),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _HistoryChip extends StatelessWidget {
+class _HistoryCard extends StatelessWidget {
   final DriveCommand cmd;
   final Color fg;
-  const _HistoryChip({required this.cmd, required this.fg});
+  const _HistoryCard({required this.cmd, required this.fg});
 
   @override
   Widget build(BuildContext context) {
     final def = commandByKey(cmd.keys.first);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 18, 8),
-      decoration: BoxDecoration(
-        color: fg.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Dasselbe Schild wie groß in der Mitte – der Verlauf spricht
-          // dieselbe Bildsprache wie die Anzeige.
-          if (def != null)
-            TrafficSign(def: def, size: 30)
-          else
-            Icon(Icons.chat_bubble_outline, color: fg, size: 26),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              // Trägt die Ordnungszahl mit: sonst stünden „links" und
-              // „2. Straße links" im Verlauf identisch da.
-              cmd.isFreitext ? cmd.text : displayLabel(cmd),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: fg,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 180),
+      child: Opacity(
+        opacity: 0.78,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+          decoration: BoxDecoration(
+            color: fg.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: fg.withValues(alpha: 0.28)),
           ),
-          if (cmd.isCombo)
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text(
-                '+${cmd.keys.length - 1}',
-                style: TextStyle(
-                  color: fg.withValues(alpha: 0.8),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Dasselbe Schild wie groß in der Mitte – der Verlauf spricht
+              // dieselbe Bildsprache wie die Anzeige.
+              SizedBox(
+                height: 56,
+                child: def != null
+                    ? TrafficSign(def: def, size: 56)
+                    : Icon(Icons.chat_bubble_outline, color: fg, size: 44),
               ),
-            ),
-        ],
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      // Trägt die Ordnungszahl mit: sonst stünden „links"
+                      // und „2. Straße links" im Verlauf identisch da.
+                      cmd.isFreitext ? cmd.text : displayLabel(cmd),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: fg,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (cmd.isCombo)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 5),
+                      child: Text(
+                        '+${cmd.keys.length - 1}',
+                        style: TextStyle(
+                          color: fg.withValues(alpha: 0.8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
