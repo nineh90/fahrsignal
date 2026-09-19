@@ -367,6 +367,17 @@ Nur wo das Schild die Anweisung selbst ausschreibt: Tempo 30/50/70/100, Unbegren
 20er/30er Zone. Schritttempo, Langsamer, Schneller, Bremsen behalten ihr Wort. Die
 Limits stehen als Gruppe `tempolimit` in einer Zeile hintereinander.
 
+**Beim Schüler steht unter einem amtlichen Zeichen kein Wort** (Rückmeldung 19.09.2026):
+das Schild wird im Unterricht gelehrt und soll wie an der Straße erkannt werden – dort
+steht auch nichts darunter. `CommandDef.receiverShowsLabel` (= `!isSign`) entscheidet;
+die Empfängeransicht fragt es an allen drei Stellen ab: große Anzeige (das Zeichen darf
+dann größer stehen, bis 320 px), Kombi-Chips (Zeichen allein, Piktogramm mit Wort) und
+Verlaufskarte. Die **Ordnungszahl bleibt** als Plakette am Zeichen – sonst wären „links"
+und „2. Straße links" nicht zu unterscheiden. Piktogramme behalten ihr Wort: sie sind
+keine gelernte Bildsprache. Die Sprachausgabe spricht das Wort weiterhin. Das ist
+unabhängig von `signOnly` – das betrifft nur die Sender-Kachel.
+`test/receiver_history_test.dart` („amtliches Zeichen steht ohne Wort") hält es fest.
+
 Die Zuordnung steht als Nummer am Katalogeintrag (`vz: '209-10'` → `assets/signs/vz209-10.svg`),
 nicht in der UI. `test/traffic_sign_test.dart` hält Zuordnung und Dateien zusammen: ein
 Tippfehler in der Nummer fiele sonst erst im Auto auf, wenn die Kachel leer bleibt.
@@ -447,9 +458,11 @@ Was beim Zeichnen zu beachten ist:
   flutter_svg zeigt bei so einem Pfad das ganze Bild nicht – ohne Fehler im Log.
 
 **Vorschau ohne Gerät:** `FS_PREVIEW=1 flutter test test/preview/tiles_preview_test.dart`
-rendert das komplette Kachelraster nach `/tmp/fs/tiles.png` und einige Empfänger-
-schirme nach `/tmp/fs/receiver.png` (`FS_KEYS=links,bremsen,…`). Ohne die Variable
-wird der Test übersprungen (Tag `preview`).
+rendert das komplette Kachelraster nach `/tmp/fs/tiles.png`, eine Reihe Bild+Wort nach
+`/tmp/fs/receiver.png` (`FS_KEYS=links,bremsen,…`) und die **echte `ReceiverView`** im
+Handyformat nach `/tmp/fs/receiver_real.png` (`FS_PREV=spiegel FS_KEY=links FS_ORD=2`
+oder `FS_COMBO=links,rechts,spiegel`). Ohne die Variable wird der Test übersprungen
+(Tag `preview`).
 
 ### Damit alle Schilder gleich groß *wirken*
 

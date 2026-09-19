@@ -277,20 +277,25 @@ class _CommandDisplay extends StatelessWidget {
       return _ExplainedDisplay(def: primary, fg: fg, ask: c.ask);
     }
     final secondaries = c.keys.skip(1).map(commandByKey).nonNulls.toList();
+    // Ein amtliches Zeichen steht **ohne Wort** – es wird im Unterricht
+    // gelehrt und soll wie an der Straße erkannt werden. Nur ein Piktogramm
+    // braucht die Beschriftung (`receiverShowsLabel`).
+    final showLabel = primary?.receiverShowsLabel ?? true;
     // Ein Verkehrszeichen trägt mehr Details als ein Piktogramm (drei Pfeile
     // im Kreisverkehr, die Ampel im Dreieck) und darf deshalb größer stehen –
     // mitwachsend mit dem Gerät, aber gedeckelt, damit auf einem kleinen
-    // Handy neben dem Wort darunter noch Platz bleibt.
-    final signSize = (MediaQuery.sizeOf(context).shortestSide * 0.5).clamp(
-      150.0,
-      260.0,
-    );
+    // Handy neben dem Wort darunter noch Platz bleibt. Ohne Wort darf das
+    // Zeichen den frei gewordenen Platz nehmen: es *ist* dann die Anzeige.
+    final shortest = MediaQuery.sizeOf(context).shortestSide;
+    final signSize = showLabel
+        ? (shortest * 0.5).clamp(150.0, 260.0)
+        : (shortest * 0.62).clamp(150.0, 320.0);
     final baseVisual = primary != null
         ? TrafficSign(def: primary, size: signSize, color: fg)
         : Icon(Icons.info, color: fg, size: 150);
 
     // Ordnungszahl als Plakette am Symbol: „zweite Straße links" muss auf
-    // einen Blick von „links" unterscheidbar sein.
+    // einen Blick von „links" unterscheidbar sein – auch ohne Wort darunter.
     final visual = c.hasOrdinal
         ? Stack(
             clipBehavior: Clip.none,
@@ -309,31 +314,33 @@ class _CommandDisplay extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         visual,
-        const SizedBox(height: 20),
-        // Nur das **Wort** passt sich an, nicht das Zeichen: ohne eigene
-        // Begrenzung zog ein langes Label den umgebenden FittedBox zusammen
-        // und das Schild wurde nebenbei halb so groß wie bei „LINKS" –
-        // gleiche Anzeige, zwei Größen. Das Wort steht deshalb in eigener,
-        // fester Breite – in einer Zeile, bei Überlänge verkleinert.
-        SizedBox(
-          width: MediaQuery.sizeOf(context).width - 40,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              displayLabel(c).toUpperCase(),
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(
-                color: fg,
-                fontSize: secondaries.isNotEmpty
-                    ? _kComboLabelSize
-                    : _kLabelSize,
-                fontWeight: FontWeight.bold,
-                height: 1.05,
+        if (showLabel) ...[
+          const SizedBox(height: 20),
+          // Nur das **Wort** passt sich an, nicht das Zeichen: ohne eigene
+          // Begrenzung zog ein langes Label den umgebenden FittedBox zusammen
+          // und das Schild wurde nebenbei halb so groß wie bei „LINKS" –
+          // gleiche Anzeige, zwei Größen. Das Wort steht deshalb in eigener,
+          // fester Breite – in einer Zeile, bei Überlänge verkleinert.
+          SizedBox(
+            width: MediaQuery.sizeOf(context).width - 40,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                displayLabel(c).toUpperCase(),
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: secondaries.isNotEmpty
+                      ? _kComboLabelSize
+                      : _kLabelSize,
+                  fontWeight: FontWeight.bold,
+                  height: 1.05,
+                ),
               ),
             ),
           ),
-        ),
+        ],
         if (secondaries.isNotEmpty) ...[
           const SizedBox(height: 18),
           Wrap(
@@ -357,21 +364,27 @@ class _OrdinalBadge extends StatelessWidget {
   final int ord;
   final Color fg;
   final Color bg;
+  final double size;
 
-  const _OrdinalBadge({required this.ord, required this.fg, required this.bg});
+  const _OrdinalBadge({
+    required this.ord,
+    required this.fg,
+    required this.bg,
+    this.size = 66,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 66,
-      height: 66,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
       child: Text(
         '$ord.',
         style: TextStyle(
           color: bg,
-          fontSize: 34,
+          fontSize: size * 0.52,
           fontWeight: FontWeight.w900,
           height: 1,
         ),
@@ -495,16 +508,24 @@ class _SecondaryChip extends StatelessWidget {
         children: [
           // Auch hier das Schild: „links und dann rechts" zeigte sonst oben
           // ein Schild und daneben einen Icon-Pfeil für dieselbe Sache.
-          TrafficSign(def: def, size: 34, color: fg),
-          const SizedBox(width: 10),
-          Text(
-            def.label.toUpperCase(),
-            style: TextStyle(
-              color: fg,
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-            ),
+          // Ein amtliches Zeichen steht allein und dafür größer; nur ein
+          // Piktogramm bekommt sein Wort daneben.
+          TrafficSign(
+            def: def,
+            size: def.receiverShowsLabel ? 34 : 48,
+            color: fg,
           ),
+          if (def.receiverShowsLabel) ...[
+            const SizedBox(width: 10),
+            Text(
+              def.label.toUpperCase(),
+              style: TextStyle(
+                color: fg,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -569,6 +590,39 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final def = commandByKey(cmd.keys.first);
+    // Wie in der großen Anzeige: ein amtliches Zeichen ohne Wort. Die
+    // Ordnungszahl bleibt als kleine Plakette, sonst stünden „links" und
+    // „2. Straße links" im Verlauf identisch da.
+    final showLabel = def?.receiverShowsLabel ?? true;
+    final zeile = <Widget>[
+      if (showLabel)
+        Flexible(
+          child: Text(
+            cmd.isFreitext ? cmd.text : displayLabel(cmd),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: fg,
+              fontSize: 21,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        )
+      else if (cmd.hasOrdinal)
+        _OrdinalBadge(ord: cmd.ord, fg: fg, bg: commandColor(cmd), size: 30),
+      if (cmd.isCombo)
+        Padding(
+          padding: const EdgeInsets.only(left: 5),
+          child: Text(
+            '+${cmd.keys.length - 1}',
+            style: TextStyle(
+              color: fg.withValues(alpha: 0.8),
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+    ];
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 280),
       child: Opacity(
@@ -591,38 +645,10 @@ class _HistoryCard extends StatelessWidget {
                     ? TrafficSign(def: def, size: _kPastSignSize, color: fg)
                     : Icon(Icons.chat_bubble_outline, color: fg, size: 64),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      // Trägt die Ordnungszahl mit: sonst stünden „links"
-                      // und „2. Straße links" im Verlauf identisch da.
-                      cmd.isFreitext ? cmd.text : displayLabel(cmd),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: fg,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  if (cmd.isCombo)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 5),
-                      child: Text(
-                        '+${cmd.keys.length - 1}',
-                        style: TextStyle(
-                          color: fg.withValues(alpha: 0.8),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+              if (zeile.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(mainAxisSize: MainAxisSize.min, children: zeile),
+              ],
             ],
           ),
         ),

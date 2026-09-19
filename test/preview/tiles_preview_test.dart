@@ -13,7 +13,11 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:fahrsignal/domain/command_catalog.dart';
+import 'package:fahrsignal/domain/drive_command.dart';
+import 'package:fahrsignal/transport/fake_transport.dart';
+import 'package:fahrsignal/ui/receiver_view.dart';
 import 'package:fahrsignal/ui/traffic_signs.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -179,5 +183,46 @@ void main() {
       await tester.pump();
     }
     await _snap(tester, key, '/tmp/fs/receiver.png');
+  }, skip: !on);
+
+  // Echte Empfängeransicht (Handyformat) mit Verlauf: FS_PREV wird zuerst
+  // gesendet, dann FS_KEY (optional FS_ORD, FS_COMBO=a,b,c).
+  //   FS_PREVIEW=1 FS_PREV=spiegel FS_KEY=links flutter test test/preview/…
+  testWidgets('echte Empfängeransicht als PNG', (tester) async {
+    await tester.runAsync(_loadFonts);
+    final env = Platform.environment;
+    final prev = env['FS_PREV'];
+    final key = env['FS_KEY'] ?? 'links';
+    final ord = int.tryParse(env['FS_ORD'] ?? '') ?? 0;
+    final combo = env['FS_COMBO']?.split(',');
+    final rk = GlobalKey();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: RepaintBoundary(key: rk, child: const ReceiverView()),
+        ),
+      ),
+    );
+    Future<void> send(DriveCommand c) async {
+      await FakeTransport('DEV').sendCommand(c);
+      for (var i = 0; i < 10; i++) {
+        await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    if (prev != null) await send(DriveCommand.now(prev, Urgency.info));
+    await send(
+      combo != null
+          ? DriveCommand.combo(combo, Urgency.info, ord: ord)
+          : DriveCommand.now(key, Urgency.info, ord: ord),
+    );
+    await _snap(tester, rk, '/tmp/fs/receiver_real.png');
   }, skip: !on);
 }

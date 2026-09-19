@@ -226,6 +226,14 @@ class CommandDef {
   /// Pfad des Zeichenbildes; leer, wenn das Zeichen gezeichnet wird.
   String get vzAsset => vz.isEmpty ? '' : 'assets/signs/vz$vz.svg';
 
+  /// Steht beim Fahrschüler ein Wort unter dem Bild? **Bei einem amtlichen
+  /// Zeichen nicht** (Rückmeldung 19.09.2026): das Schild wird im Unterricht
+  /// gelehrt und soll ohne Beschriftung erkannt werden – an der Straße steht
+  /// auch kein Wort darunter. Piktogramme dagegen brauchen ihr Wort, sie sind
+  /// keine gelernte Sprache. Gilt für die große Anzeige, die Kombi-Chips und
+  /// den Verlauf; die Sprachausgabe spricht das Wort weiterhin.
+  bool get receiverShowsLabel => !isSign;
+
   /// Pfad des eigenen Piktogramms; leer, wenn das Material-Symbol gilt.
   String get pictoAsset => picto.isEmpty ? '' : 'assets/pictos/$picto.svg';
 }

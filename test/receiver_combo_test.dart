@@ -21,6 +21,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('TEMPO 30'), findsOneWidget);
+    // Das Zeichen an der Spitze steht ohne Wort, die Piktogramme dahinter
+    // mit ihrem Wort.
+    expect(find.text('TEMPO 30'), findsNothing);
+    expect(find.text('SPIEGEL'), findsOneWidget);
+    expect(find.text('SCHULTERBLICK'), findsOneWidget);
   });
 }
