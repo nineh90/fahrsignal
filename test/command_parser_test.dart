@@ -23,7 +23,10 @@ void main() {
         'Vorfahrt beachten': 'vorfahrt_gewaehren',
         'der hat Vorfahrt': 'vorfahrt_gewaehren',
         'Vorfahrtstraße': 'vorfahrtstrasse',
-        'du hast Vorfahrt': 'vorfahrtstrasse',
+        'du hast Vorfahrt': 'vorfahrt',
+        'Vorfahrt an der nächsten Kreuzung': 'vorfahrt',
+        'abknickende Vorfahrt links': 'abknickend_links',
+        'Tastgeschwindigkeit': 't_tast',
       }.entries) {
         final r = parseUtterance(pair.key);
         expect(r.key, pair.value, reason: pair.key);

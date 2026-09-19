@@ -71,8 +71,11 @@ double _optisch(CommandDef def) {
       '306' => 1.12,
       // Achteck kommt dem Kreis nahe.
       '206' => 1.03,
-      // Dreieck mit Ausrufezeichen – schlanker als die anderen Dreiecke.
-      '101' => 1.18,
+      // Dreiecke mit schlankem Inhalt.
+      '101' || '301' => 1.18,
+      // Hochformat (Zeichen + Zusatzzeichen): `size` ist die Höhe, und die
+      // Raute obendrauf wäre bei gleicher Höhe nur halb so groß wie allein.
+      '306-1002-10' || '306-1002-20' => 1.25,
       // Vollflächige Quadrate wirken am größten und werden zurückgenommen.
       '314' || '274-1' || '274-1-20' || '365-52' => 0.92,
       // Querformat-Schild: tanzt aus der Reihe, bleibt bei voller Höhe.
@@ -97,6 +100,9 @@ double _optisch(CommandDef def) {
 /// entziffern.
 double _aspect(CommandDef def) {
   if (def.vz == '325-1') return 732 / 489;
+  // Abknickende Vorfahrt: Hauptzeichen mit Zusatzzeichen darunter, wie am
+  // Mast – ein Hochformat.
+  if (def.vz.startsWith('306-1002')) return 600 / 1057;
   return 1;
 }
 

@@ -238,6 +238,15 @@ def tacho(needle_deg, sign):
 
 P['langsamer'] = tacho(150, '-')
 P['schneller'] = tacho(30, '+')
+# Tastgeschwindigkeit (1–3 km/h): Schnecke mit Ausrufezeichen – „ganz langsam
+# herantasten". Gehäuse als Spirale, Körper mit Fühlern.
+P['t_tast'] = svg(
+    rect(4, 72, 72, 14, 7),                    # Fuß
+    rect(58, 46, 18, 32, 8),                   # Kopf
+    stroke('M62,48 L55,32 M72,48 L78,34', 7),  # Fühler
+    circle(36, 50, 22, 11), circle(36, 50, 7), # Gehäuse
+    stroke('M90,6 V30', 11), circle(90, 44, 6))
+
 # Bremsen: das Cockpit-Symbol „(!)" – kein Kreis mit Rand, sondern zwei Bögen.
 P['bremsen'] = svg(
     stroke('M26,16 A42,42 0 0 0 26,84'), stroke('M74,16 A42,42 0 0 1 74,84'),

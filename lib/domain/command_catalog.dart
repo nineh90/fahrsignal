@@ -454,6 +454,17 @@ const List<CommandDef> kCommandCatalog = [
     // Mit Wort: die Zahl steht eben nicht darauf.
     vz: '325-1',
   ),
+  // Tastgeschwindigkeit (1–3 km/h): langsames Herantasten an unübersichtliche
+  // Stellen. Kein amtliches Zeichen – die Schnecke mit Ausrufezeichen.
+  CommandDef(
+    't_tast',
+    'Tastgeschwindigkeit',
+    Icons.directions_walk,
+    Urgency.achtung,
+    CommandCategory.tempo,
+    tileLabel: 'Tasttempo',
+    picto: 't_tast',
+  ),
   // Zonenschilder statt Einzelanordnung: VZ 274.1 gilt bis zum Ende der Zone
   // und ist damit eine andere Ansage als das Tempolimit an einer Stelle.
   CommandDef(
@@ -600,6 +611,37 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.hinweis,
     vz: '306',
+  ),
+  CommandDef(
+    'vorfahrt',
+    'Vorfahrt',
+    Icons.diamond,
+    Urgency.info,
+    CommandCategory.hinweis,
+    // VZ 301 Vorfahrt (an der nächsten Kreuzung)
+    vz: '301',
+  ),
+  // Abknickende Vorfahrt: an der Straße VZ 306 mit Zusatzzeichen 1002-10/-20
+  // darunter – die Datei ist genau diese Kombination, wie sie am Mast hängt.
+  CommandDef(
+    'abknickend_links',
+    'Abknickende Vorfahrt links',
+    Icons.turn_left,
+    Urgency.info,
+    CommandCategory.hinweis,
+    vz: '306-1002-10',
+    tileLabel: 'Abknickend links',
+    group: 'abknickend',
+  ),
+  CommandDef(
+    'abknickend_rechts',
+    'Abknickende Vorfahrt rechts',
+    Icons.turn_right,
+    Urgency.info,
+    CommandCategory.hinweis,
+    vz: '306-1002-20',
+    tileLabel: 'Abknickend rechts',
+    group: 'abknickend',
   ),
   CommandDef(
     'hindernis',
@@ -1273,8 +1315,8 @@ const Set<String> kExamHiddenKeys = {
   'langsamer', 'schneller',
   // Das zulässige Tempo aus den Schildern abzuleiten ist Prüfungsleistung –
   // die Vorgabe wäre die halbe Antwort.
-  't_schritt', 't_zone20', 't_zone30', 't_30', 't_50', 't_70', 't_100',
-  't_frei',
+  't_schritt', 't_tast', 't_zone20', 't_zone30', 't_30', 't_50', 't_70',
+  't_100', 't_frei',
 };
 
 /// Notkommandos. Sie überstimmen jede Sperre: die Fahrlehrperson trägt auch

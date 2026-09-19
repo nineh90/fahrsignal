@@ -153,6 +153,17 @@ const Map<String, List<String>> kCommandPhrases = {
     'schritt tempo',
     '4 bis 7',
   ],
+  't_tast': [
+    'tastgeschwindigkeit',
+    'tasttempo',
+    'tast tempo',
+    'antasten',
+    'herantasten',
+    'rantasten',
+    'langsam antasten',
+    'langsam rantasten',
+    'schneckentempo',
+  ],
   't_30': ['tempo 30', '30', '30 fahren'],
   't_zone20': [
     '20er zone',
@@ -237,11 +248,31 @@ const Map<String, List<String>> kCommandPhrases = {
     'die haben vorfahrt',
     'vorfahrt lassen',
   ],
-  'vorfahrtstrasse': [
-    'vorfahrtstrasse',
-    'vorfahrt strasse',
+  'vorfahrtstrasse': ['vorfahrtstrasse', 'vorfahrt strasse'],
+  // VZ 301 – „du hast Vorfahrt" ist genau die Aussage dieses Zeichens (an der
+  // nächsten Kreuzung), nicht die der Vorfahrtstraße.
+  'vorfahrt': [
     'du hast vorfahrt',
     'wir haben vorfahrt',
+    'vorfahrt an der naechsten kreuzung',
+    'vorfahrt naechste kreuzung',
+    'naechste kreuzung vorfahrt',
+    'vorfahrt kreuzung',
+    'kreuzung vorfahrt',
+  ],
+  'abknickend_links': [
+    'abknickende vorfahrt links',
+    'abknickende vorfahrt nach links',
+    'vorfahrt knickt nach links',
+    'vorfahrt knickt links ab',
+    'abknickend links',
+  ],
+  'abknickend_rechts': [
+    'abknickende vorfahrt rechts',
+    'abknickende vorfahrt nach rechts',
+    'vorfahrt knickt nach rechts',
+    'vorfahrt knickt rechts ab',
+    'abknickend rechts',
   ],
   'hindernis': [
     'hindernis',
