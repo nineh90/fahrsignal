@@ -186,11 +186,12 @@ P['einordnen'] = svg(
     stroke('M20,96 C20,58 50,66 50,40'),
     stroke('M80,96 C80,58 50,66 50,40'),
     arrow([(50, 44), (50, 6)], 13))
-# Straße: „die nächste Straße" – Querstraße geht ab, Pfeil biegt ein.
+# Straße: gerade Straße mit Fluchtpunkt, Mittelstreifen. Bewusst ohne Abzweig
+# und Pfeil – die Variante mit Querstraße sah nach „abbiegen" aus. Die Richtung
+# kommt in der Kombi („2. Straße links") vom Zeichen daneben.
 P['strasse'] = svg(
-    stroke('M18,98 V2', 9), stroke('M50,98 V2', 9),
-    stroke('M50,36 H98', 9), stroke('M50,72 H98', 9),
-    arrow([(34, 94), (34, 54), (84, 54)], 13))
+    stroke('M8,96 L38,6', 10), stroke('M92,96 L62,6', 10),
+    stroke('M50,92 V10', 8, 'stroke-dasharray="11 10"'))
 # Straße folgen: geschwungener Verlauf mit Pfeil.
 P['folgen'] = svg(
     stroke('M50,96 C50,66 18,74 18,50 C18,26 82,42 82,18', 12),
