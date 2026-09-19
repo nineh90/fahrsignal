@@ -286,7 +286,7 @@ class _CommandDisplay extends StatelessWidget {
       260.0,
     );
     final baseVisual = primary != null
-        ? TrafficSign(def: primary, size: signSize)
+        ? TrafficSign(def: primary, size: signSize, color: fg)
         : Icon(Icons.info, color: fg, size: 150);
 
     // Ordnungszahl als Plakette am Symbol: „zweite Straße links" muss auf
@@ -411,7 +411,7 @@ class _ExplainedDisplay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          TrafficSign(def: def, size: ask ? 132 : 116),
+          TrafficSign(def: def, size: ask ? 132 : 116, color: fg),
           const SizedBox(height: 18),
           Text(
             def.label.toUpperCase(),
@@ -495,7 +495,7 @@ class _SecondaryChip extends StatelessWidget {
         children: [
           // Auch hier das Schild: „links und dann rechts" zeigte sonst oben
           // ein Schild und daneben einen Icon-Pfeil für dieselbe Sache.
-          TrafficSign(def: def, size: 34),
+          TrafficSign(def: def, size: 34, color: fg),
           const SizedBox(width: 10),
           Text(
             def.label.toUpperCase(),
@@ -588,7 +588,7 @@ class _HistoryCard extends StatelessWidget {
               SizedBox(
                 height: _kPastSignSize,
                 child: def != null
-                    ? TrafficSign(def: def, size: _kPastSignSize)
+                    ? TrafficSign(def: def, size: _kPastSignSize, color: fg)
                     : Icon(Icons.chat_bubble_outline, color: fg, size: 64),
               ),
               const SizedBox(height: 8),

@@ -318,11 +318,29 @@ Wo ein Kommando einem amtlichen Zeichen entspricht, zeigen Sender-Kachel und
 Empfängerschirm dieses Zeichen – dieselbe Bildsprache, die am Straßenrand steht, ist
 ohne Sprache am schnellsten zu erfassen.
 
+**Auskunft TÜV (19.09.2026): nur Zeichen, die es wirklich gibt.** Die App darf keine
+Schilder zeigen, die an keiner Straße stehen – auch nicht „in der Formensprache der
+StVO" nachgebaute (blauer Kreis mit Symbol, Gefahrendreieck mit Symbol). Genau das
+hatte die App zwischen dem 13.08. und dem 19.09. für rund 90 Kommandos getan. Die
+Regel ist jetzt zweiteilig und steht im Katalog, nicht in der UI:
+
+- Gibt es ein amtliches Zeichen, trägt der Eintrag `vz:` und zeigt **dieses** Zeichen.
+- Gibt es keines, zeigt der Eintrag ein **Piktogramm** (`picto:` oder das Material-
+  `icon`), flach und einfarbig, ohne Fläche dahinter – erkennbar *kein* Schild.
+  Siehe „Kommandos ohne amtliches Zeichen".
+
+Geprüft wurde Schild für Schild. Dabei kamen drei echte Zeichen dazu, für die es
+vorher einen Nachbau gab: **Hindernis → VZ 101** (Gefahrstelle), **Tanken →
+VZ 365-52** (Tankstelle) und **Unbegrenzt → VZ 282** als amtliche Datei statt der
+Zeichnung (die hatte vier graue Striche, das Original fünf schwarze). Bewusst *nicht*
+übernommen: VZ 273 für „Abstand" – das Zeichen zeigt Lkw und eine Meterangabe
+(„70 m") und würde dem Fahrschüler etwas Falsches sagen.
+
 Die Dateien in `assets/signs/` sind die amtlichen Zeichen von Wikimedia Commons;
 StVO-Zeichen sind als amtliche Werke (§ 5 UrhG) gemeinfrei, die konkreten SVGs stehen
 dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 `sodipodi:namedview` entfernt – sonst schreibt `flutter_svg` bei jedem Aufbau
-„unhandled element" ins Log. Zusammen wiegen alle vierzehn ~56 kB.
+„unhandled element" ins Log. Zusammen wiegen alle siebzehn ~65 kB.
 
 | Kommando | Zeichen |
 |---|---|
@@ -335,11 +353,13 @@ dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 | Vorfahrtstraße | VZ 306 |
 | Halten | VZ 314 (Parken) – seit SAR-119 standardmäßig ausgeblendet |
 | Stop | VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft |
+| Hindernis | VZ 101 (Gefahrstelle) – das amtliche „Achtung, da ist etwas" |
+| Tanken | VZ 365-52 (Tankstelle) |
 | Schritttempo | VZ 325.1 – das Spielstraßen-Schild *ist* die Anweisung; eine Zahl 4–7 im Verbotszeichen steht so an keiner Straße |
 | 30er Zone | VZ 274.1 – gilt bis zum Zonenende und ist damit eine andere Ansage als ein Limit an einer Stelle |
 | 20er Zone | VZ 274.1-20 (verkehrsberuhigter Geschäftsbereich) → `vz274-1-20.svg` |
 | Tempo 30/50/70/100 | VZ 274, **gezeichnet** (`SignShape.limit`) |
-| Unbegrenzt | VZ 282, gezeichnet (`SignShape.ende`) |
+| Unbegrenzt | VZ 282 |
 
 **Kacheln ohne Wort (SAR-119):** `signOnly: true` am Katalogeintrag – die Sender-Kachel
 zeigt dann nur das Schild, größer (`_kSignOnlySize`), mit dem `label` als Screenreader-Name.
@@ -365,7 +385,9 @@ darunter (`ColorFilter` + `BlendMode.srcIn`). Der Saum folgt damit jeder Form vo
 – Kreis, Dreieck, Raute, Achteck, Querformat – und braucht keine Liste, welches Zeichen
 welche Form hat. Der Vorgänger, eine weiße Platte hinter dem Zeichen, sah bei runden
 Zeichen nach aufgeklebtem Sticker aus und bei Dreieck und Raute nach weißem Kasten;
-genau das war die Rückmeldung aus der Fahrschule.
+genau das war die Rückmeldung aus der Fahrschule. Das gezeichnete VZ 274 lässt
+dafür `_kBleed` (4,5 % der Kantenlänge) frei – ohne den weißen Rand liefe es auf der
+roten Tempo-Kachel in den Grund über.
 
 Nicht jedes Zeichen ist quadratisch: VZ 325.1 ist ein Querformat-Schild. `_aspect` gibt
 das Seitenverhältnis, `size` ist deshalb die **Höhe** – ins Quadrat gezwängt schrumpfte
@@ -381,63 +403,74 @@ nur bei nicht-quadratischer Form eine Zeile in `_aspect`.
 
 ### Kommandos ohne amtliches Zeichen
 
-Rückmeldung (13.08.2026): **Auch die übrigen Kacheln sollen Schilder sein.** Für
-„Links einordnen" gibt es kein amtliches Zeichen – aber es *kann* eines aussehen wie
-eines. `SignStyle` baut deshalb jedes verbleibende Kommando in der Formensprache der
-StVO nach: das Material-Symbol des Katalogeintrags steht auf einer gezeichneten
-Schildform. Damit spricht der Schülerschirm durchgehend dieselbe Bildsprache, statt
-zwischen Schildern und Piktogrammen zu springen.
+Für „Links einordnen" gibt es kein Zeichen – und seit der TÜV-Auskunft darf auch
+keines *aussehen* wie eines. Solche Kommandos zeigen ein **Piktogramm**: flach, in
+der Vordergrundfarbe der Fläche, ohne Scheibe, Dreieck oder Rechteck dahinter.
+Damit ist auf dem Schülerschirm auf einen Blick klar, was amtliches Zeichen ist und
+was Anweisung der Fahrlehrperson.
 
-Form und Farbe sind nicht dekorativ gewählt – sie tragen im Straßenverkehr bereits
-Bedeutung, und die passt auf die Kommandoarten:
+Zwei Quellen, beide am Katalogeintrag:
 
-| Klasse | Aussehen | Bedeutung | Kategorien |
-|---|---|---|---|
-| `vorschrift` | blauer Kreis, weißes Symbol | Gebot: „so fahren" | Richtung, Grundfahraufgaben |
-| `verbot` | weiße Scheibe, roter Ring, schwarzes Symbol | Beschränkung | Tempo |
-| `gefahr` | weißes Dreieck, roter Rand, schwarzes Symbol | Achtung | Hinweise + alles Dringende |
-| `richt` | blaues Quadrat, weißes Symbol | Information | Fahrzeug, Lob, Coaching, Organisation |
+- **`picto: '<name>'`** → `assets/pictos/<name>.svg`, ein eigenes Bild. 57 Stück,
+  alle **aus `tool/pictos.py` erzeugt** (`python3 tool/pictos.py`, mit `--sheet`
+  zusätzlich eine Übersicht nach `/tmp/fs/pictos.png`). Der Generator baut sie aus
+  denselben Bausteinen (Auto von oben, Auto von hinten, Pfeil, Kopf von oben, Lampe,
+  Pedal) in derselben Strichstärke – so wirken sie wie eine Familie. **Die SVGs
+  nicht von Hand ändern**, sondern das Skript.
+- Sonst das **Material-`icon`** des Eintrags. Reicht überall dort, wo Material
+  etwas Treffendes hat (Daumen, Pokal, Schlüssel, Tacho, Kaffeetasse …).
 
-Die Zuordnung hängt an **Kategorie und Dringlichkeit**, nicht am einzelnen Kommando
-(`CommandDef.signStyle`): eine neue Kachel bekommt damit ohne Zutun das Schild, das zu
-ihrer Art passt. Zwei Stellen weichen bewusst ab:
+Eigene Bilder gibt es vor allem für das, was **während der Fahrt** ankommt und wo
+Material danebenlag: Taschenlampe für „Blinker", „360°" für „Schulterblick", Zahnrad
+für „Gang wechseln", zweimal dasselbe Auge für „Spiegel" und „Nach hinten schauen".
+Für die Fahrzeugkunde sind es die **Cockpit-Symbole nach ISO 2575** (Abblend-,
+Fern-, Standlicht, Nebel, Öl, Kühlwasser, Bremse „(!)", Gurt, Warnblinker) – die kennt
+jeder Fahrschüler vom Armaturenbrett, und sie sind keine Verkehrszeichen.
 
-- **„Bremsen" ist ein Gefahrzeichen**, obwohl es bei Tempo steht – es ist kein Limit,
-  sondern ein Notruf. Sein Symbol ist deshalb das Ausrufezeichen und nicht das
-  Warndreieck-Icon: das Zeichen *ist* schon ein Dreieck, sonst stünde eines im anderen.
-  Zusammen ergibt das VZ 101.
-- **„Schulterblick" & Co. sind Gefahrzeichen**, auch die ruhig eingestuften. Ein
-  Schulterblick ist kein Hinweisschild, sondern ein Achtung.
+Was beim Zeichnen zu beachten ist:
 
-**Der weiße Saum gilt auch hier** – und für die gezeichneten Tempo-Zeichen ebenso: ohne
-ihn läuft VZ 274 auf der roten Tempo-Kachel in den Grund über. Alle Painter lassen dafür
-`_kBleed` (4,5 % der Kantenlänge) frei; bei den SVG-Zeichen macht dasselbe die
-vergrößerte weiße Silhouette.
+- **Einfarbig.** Die Datei kennt nur `white`; die App färbt über `ColorFilter`
+  (`BlendMode.srcIn`) in die Vordergrundfarbe – auf der gelben Beleuchtungs-Kachel
+  also dunkel. Aussparungen (Scheiben, Leuchten, der Gurt) gehen deshalb **nur über
+  `fill-rule="evenodd"`**, nicht über eine zweite Farbe; ein Streifen, der über die
+  Fläche hinausragt, wird außerhalb wieder gefüllt. `test/traffic_sign_test.dart`
+  lehnt Dateien mit `#` ab.
+- **Keine Schildform.** Kein Kreis mit Rand, kein Dreieck mit Rand, kein „P" als
+  Buchstabe, kein Achteck. Der Test prüft, dass unter einem Piktogramm kein
+  `CustomPaint` liegt – die vier Nachbau-Painter sind gelöscht, nur der für VZ 274
+  ist geblieben.
+- **Strichstärke 11 von 100**, Inhalt bis an den Rand. Die Kachel zeigt 42 px – ein
+  Auto mit zwei Scheiben und vier Rädern wird dort zum Käfer, deshalb hat das Auto
+  von oben nur eine Scheibe. Erst im Raster beurteilen, nicht in der Einzelansicht.
+- **Pfadzahlen kurz halten** (`n()` im Skript) und **Radien auf die halbe Kante
+  begrenzen**: `rrect_path` erzeugte für eine sehr flache Scheibe `v--0.24`, und
+  flutter_svg zeigt bei so einem Pfad das ganze Bild nicht – ohne Fehler im Log.
+
+**Vorschau ohne Gerät:** `FS_PREVIEW=1 flutter test test/preview/tiles_preview_test.dart`
+rendert das komplette Kachelraster nach `/tmp/fs/tiles.png` und einige Empfänger-
+schirme nach `/tmp/fs/receiver.png` (`FS_KEYS=links,bremsen,…`). Ohne die Variable
+wird der Test übersprungen (Tag `preview`).
 
 ### Damit alle Schilder gleich groß *wirken*
 
 Gleiche Kantenlänge heißt nicht gleiche Wirkung: bei gleicher Breite hat ein Dreieck nur
 43 % der Fläche eines Quadrats, ein Kreis 79 %, eine Raute 50 %. Nebeneinander sah das
-Raster dadurch unruhig aus – die Dreiecke (Schulterblick, Bremsen, Ampel) wirkten
+Raster dadurch unruhig aus – die Dreiecke (Ampel, Vorfahrt gewähren, Hindernis) wirkten
 verloren, das blaue P-Quadrat übergroß.
 
 `TrafficSign.size` ist deshalb die **optische Größe**, nicht die Kantenlänge; `_optisch`
-hebt oder senkt die Box je Form (Dreieck 1,16 · Raute 1,12 · Achteck 1,03 · Kreis 1,00 ·
-Quadrat 0,92). Die Zahlen sind an gerenderten Reihen abgeglichen, nicht rein gerechnet:
-eine reine Flächennormierung ließe das Dreieck aufdringlich groß werden. Das Dreieck
-bekommt zusätzlich eine breitere Box (`_aspect` = 1/0,866), sonst bliebe es bei gleicher
-Höhe schmaler als ein Kreis.
+hebt oder senkt die Box je Form (Dreieck 1,16–1,18 · Raute 1,12 · Achteck 1,03 ·
+Kreis 1,00 · Quadrat 0,92 · **Piktogramm 1,14**). Die Zahlen sind an gerenderten Reihen
+abgeglichen, nicht rein gerechnet: eine reine Flächennormierung ließe das Dreieck
+aufdringlich groß werden. Das Piktogramm wird angehoben, weil eine Glyphe ohne Fläche
+neben einem Schild gleicher Kantenlänge kleiner wirkt (das Material-Raster lässt rundum
+Luft, 20 von 24).
 
-Zwei Fallen, die beim Nachbauen aufgefallen sind:
-
-- **Das Dreieck wird um seinen Inkreismittelpunkt verkleinert**, nicht um die Boxmitte.
-  Sonst ist der rote Rand unten breiter als oben und das Zeichen sieht schief aus.
-  Ein Rand von `w` kostet dabei `w / 0,2887` an Basisbreite – knapp das Dreieinhalbfache;
-  deshalb ist die Randstärke mit 10 % der Höhe deutlich kleiner, als sie sich anfühlt.
-- **Auf dem Empfängerschirm skalierte ein `FittedBox` Zeichen und Wort gemeinsam.** Ein
-  langes „SCHULTERBLICK" zog damit das Schild auf ein Drittel zusammen, während „LINKS"
-  es groß stehen ließ – gleiche Anzeige, zwei Größen. Jetzt schrumpft nur noch das Wort
-  (eigener `FittedBox` in Bildschirmbreite), das Zeichen bleibt konstant.
+Eine Falle, die dabei aufgefallen ist: **Auf dem Empfängerschirm skalierte ein
+`FittedBox` Zeichen und Wort gemeinsam.** Ein langes „SCHULTERBLICK" zog damit das Schild
+auf ein Drittel zusammen, während „LINKS" es groß stehen ließ – gleiche Anzeige, zwei
+Größen. Jetzt schrumpft nur noch das Wort (eigener `FittedBox` in Bildschirmbreite), das
+Zeichen bleibt konstant.
 
 Maße: Kachel 100 px hoch mit 42 px Zeichen (vorher 84/34 – das Schild ist der Inhalt der
 Kachel und muss aus dem Augenwinkel erkennbar sein), Empfänger halbe kurze Bildschirm-

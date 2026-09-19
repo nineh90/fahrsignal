@@ -97,20 +97,20 @@ void main() {
 
     // Kurzes Wort, schmale Column: genau da klebte der Inhalt am linken
     // Kachelrand, solange der Stack ihn oben links ausrichtete. „Straße"
-    // trägt ein Icon – „Links" zeigt inzwischen ein Verkehrszeichen.
-    final tile = tester.getRect(
-      find
-          .ancestor(of: find.text('Straße'), matching: find.byType(InkWell))
-          .first,
-    );
+    // trägt ein Piktogramm – „Links" zeigt ein Verkehrszeichen.
+    final tileFinder = find
+        .ancestor(of: find.text('Straße'), matching: find.byType(InkWell))
+        .first;
+    final tile = tester.getRect(tileFinder);
     expect(
       tester.getRect(find.text('Straße')).center.dx,
       closeTo(tile.center.dx, 0.5),
     );
-    expect(
-      tester.getRect(find.byIcon(Icons.add_road).first).center.dx,
-      closeTo(tile.center.dx, 0.5),
+    final bild = find.descendant(
+      of: tileFinder,
+      matching: find.byType(TrafficSign),
     );
+    expect(tester.getRect(bild).center.dx, closeTo(tile.center.dx, 0.5));
   });
 
   testWidgets('Kachel mit Verkehrszeichen zeigt das Zeichen statt des Icons', (

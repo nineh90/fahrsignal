@@ -1,0 +1,3 @@
+tags:
+  # Vorschau-Werkzeuge (test/preview/): schreiben PNGs, laufen nur mit FS_PREVIEW=1.
+  preview:

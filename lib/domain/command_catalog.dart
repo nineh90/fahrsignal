@@ -26,33 +26,11 @@ Color foregroundOn(Color bg) =>
 Urgency maxUrgency(Iterable<Urgency> us) =>
     us.reduce((a, b) => a.index >= b.index ? a : b);
 
-/// Form, in der ein Kommando beim Empfänger als Verkehrszeichen erscheint.
-/// `limit` = rundes Verbotszeichen mit Zahl, `ende` = Aufhebung (VZ 282).
-enum SignShape { none, limit, ende }
-
-/// Schildklasse für Kommandos, zu denen es **kein** amtliches Zeichen gibt.
-/// Sie werden trotzdem als Schild gezeichnet – in der Formensprache der StVO,
-/// damit auf dem Schülerschirm alles dieselbe Bildsprache spricht.
-///
-/// Die vier Klassen sind die echten: Form und Farbe tragen im Straßenverkehr
-/// bereits eine Bedeutung, und die passt hier auf die Kommandoarten.
-enum SignStyle {
-  /// Blauer Kreis, weißes Symbol – **Gebot**: „so fahren".
-  /// (Wie VZ 209 „vorgeschriebene Fahrtrichtung".)
-  vorschrift,
-
-  /// Weiße Scheibe mit rotem Ring, schwarzes Symbol – **Beschränkung**.
-  /// (Wie VZ 274 „Tempolimit".)
-  verbot,
-
-  /// Weißes Dreieck mit rotem Rand, schwarzes Symbol – **Gefahr/Achtung**.
-  /// (Wie VZ 101.) Trägt alles, was erhöhte Aufmerksamkeit verlangt.
-  gefahr,
-
-  /// Blaues Rechteck, weißes Symbol – **Information**.
-  /// (Wie VZ 314 „Parken".) Für alles Erklärende und Organisatorische.
-  richt,
-}
+/// Gezeichnetes Verkehrszeichen: `limit` = VZ 274 mit Zahl aus dem Katalog.
+/// Alle anderen Zeichen sind Bilder ([CommandDef.vz]); erfundene Schilder
+/// gibt es nicht (Auskunft TÜV, 09/2026) – was kein amtliches Zeichen hat,
+/// bekommt ein Piktogramm.
+enum SignShape { none, limit }
 
 /// Oberbereiche des Sender-Dashboards.
 enum DashboardMode { fahrt, grundfahren, fahrzeug, fahrschueler }
@@ -186,7 +164,23 @@ class CommandDef {
   ///
   /// Getrennt von [sign]: Tempo-Zeichen werden gezeichnet, weil die Zahl aus
   /// dem Katalog kommt – alle anderen sind unveränderliche Bilder.
+  ///
+  /// **Nur echte Zeichen.** Der TÜV hat klargestellt (09/2026), dass die App
+  /// keine Schilder zeigen darf, die es an der Straße nicht gibt – auch keine
+  /// „in der Formensprache der StVO" nachgebauten. Was kein amtliches Zeichen
+  /// hat, bekommt ein Piktogramm ([picto] oder [icon]), das erkennbar
+  /// **kein** Schild ist.
   final String vz;
+
+  /// Eigenes Piktogramm für Kommandos ohne amtliches Zeichen, als Datei
+  /// `assets/pictos/<name>.svg` (einfarbig, wird in der Anzeigefarbe
+  /// eingefärbt). Leer = das Material-Symbol [icon] wird gezeigt.
+  ///
+  /// Eigene Bilder nur dort, wo Material nichts Treffendes hat – vor allem
+  /// bei dem, was während der Fahrt ankommt (Einordnen, Schulterblick,
+  /// Ausfahrt …). Ein Piktogramm darf dabei nie wie ein Schild aussehen:
+  /// kein Kreis mit Rand, kein Dreieck, keine Schildfläche.
+  final String picto;
 
   /// Kurzform für die Sender-Kachel, wenn [label] dort zu lang wäre.
   /// Der Empfänger zeigt immer das volle [label].
@@ -212,6 +206,7 @@ class CommandDef {
     this.sign = SignShape.none,
     this.signText = '',
     this.vz = '',
+    this.picto = '',
     this.tileLabel = '',
     this.group = '',
     this.signOnly = false,
@@ -225,33 +220,14 @@ class CommandDef {
   String get tileText => tileLabel.isEmpty ? label : tileLabel;
 
   /// Trägt ein amtliches Zeichen (Bild oder gezeichnetes Tempo-Schild).
-  /// Alles andere wird über [signStyle] als Schild **nachgebaut** – ein
-  /// Kommando ohne Schild gibt es nicht mehr.
+  /// Alles andere zeigt ein Piktogramm – erkennbar kein Schild.
   bool get isSign => sign != SignShape.none || vz.isNotEmpty;
 
   /// Pfad des Zeichenbildes; leer, wenn das Zeichen gezeichnet wird.
   String get vzAsset => vz.isEmpty ? '' : 'assets/signs/vz$vz.svg';
 
-  /// Schildklasse für den Nachbau. Sie hängt an Kategorie und Dringlichkeit,
-  /// nicht am einzelnen Kommando: eine neue Kachel bekommt damit automatisch
-  /// das Schild, das zu ihrer Art passt.
-  SignStyle get signStyle => switch (category) {
-    // Fahraufträge sind Gebote.
-    CommandCategory.richtung ||
-    CommandCategory.grundfahraufgabe => SignStyle.vorschrift,
-    // Tempo ist eine Beschränkung – dieselbe Klasse wie VZ 274, damit
-    // „Langsamer" und „Tempo 30" als dieselbe Art Ansage lesbar sind.
-    // „Bremsen" fällt heraus: das ist kein Limit, sondern ein Notruf.
-    CommandCategory.tempo =>
-      urgency == Urgency.dringend ? SignStyle.gefahr : SignStyle.verbot,
-    // Hinweise verlangen erhöhte Aufmerksamkeit – das ist die Bedeutung des
-    // Gefahrzeichens. Gilt für die ganze Kategorie, auch für die ruhigen
-    // Einträge: „Schulterblick" ist kein Hinweisschild, sondern ein Achtung.
-    CommandCategory.hinweis => SignStyle.gefahr,
-    // Der Rest informiert (Fahrzeugkunde, Lob, Coaching, Organisation) –
-    // außer es drängt, dann zählt die Dringlichkeit mehr als das Thema.
-    _ => urgency == Urgency.info ? SignStyle.richt : SignStyle.gefahr,
-  };
+  /// Pfad des eigenen Piktogramms; leer, wenn das Material-Symbol gilt.
+  String get pictoAsset => picto.isEmpty ? '' : 'assets/pictos/$picto.svg';
 }
 
 /// Ausgangskatalog. Erweiterbar; später ggf. konfigurierbar je Fahrschule.
@@ -324,6 +300,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     group: 'einordnen',
+    picto: 'einordnen_links',
   ),
   CommandDef(
     'einordnen',
@@ -332,6 +309,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     group: 'einordnen',
+    picto: 'einordnen',
   ),
   CommandDef(
     'einordnen_rechts',
@@ -340,6 +318,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     group: 'einordnen',
+    picto: 'einordnen_rechts',
   ),
   CommandDef(
     'kreisverkehr',
@@ -360,13 +339,14 @@ const List<CommandDef> kCommandCatalog = [
     vz: '131',
   ),
   // „Bei der nächsten Straße" – steht beim Fahrlehrer direkt hinter der
-  // Ampel (SAR-120). Kein amtliches Zeichen, deshalb das nachgebaute Gebot.
+  // Ampel (SAR-120).
   CommandDef(
     'strasse',
     'Straße',
     Icons.add_road,
     Urgency.info,
     CommandCategory.richtung,
+    picto: 'strasse',
   ),
   // Die drei Kreisverkehr-Ausfahrten gehören zusammen und stehen deshalb
   // per `group` immer in einer eigenen Zeile nebeneinander – sonst reißt
@@ -378,6 +358,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     group: 'ausfahrten',
+    picto: 'ausfahrt1',
   ),
   CommandDef(
     'ausfahrt2',
@@ -386,6 +367,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     group: 'ausfahrten',
+    picto: 'ausfahrt2',
   ),
   CommandDef(
     'ausfahrt3',
@@ -394,6 +376,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     group: 'ausfahrten',
+    picto: 'ausfahrt3',
   ),
   CommandDef(
     'folgen',
@@ -401,6 +384,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.route,
     Urgency.info,
     CommandCategory.richtung,
+    picto: 'folgen',
   ),
   CommandDef(
     'rueckwaerts',
@@ -408,6 +392,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.arrow_downward,
     Urgency.info,
     CommandCategory.richtung,
+    picto: 'rueckwaerts',
   ),
 
   // --- Tempo ---
@@ -417,6 +402,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.trending_down,
     Urgency.achtung,
     CommandCategory.tempo,
+    picto: 'langsamer',
   ),
   CommandDef(
     'schneller',
@@ -424,6 +410,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.trending_up,
     Urgency.info,
     CommandCategory.tempo,
+    picto: 'schneller',
   ),
   CommandDef(
     'bremsen',
@@ -434,6 +421,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.priority_high,
     Urgency.dringend,
     CommandCategory.tempo,
+    picto: 'bremsen',
   ),
   CommandDef(
     'parken',
@@ -531,7 +519,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.all_inclusive,
     Urgency.info,
     CommandCategory.tempo,
-    sign: SignShape.ende,
+    // VZ 282 Ende sämtlicher Streckenverbote
+    vz: '282',
     group: 'tempolimit',
     signOnly: true,
   ),
@@ -551,6 +540,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.visibility,
     Urgency.info,
     CommandCategory.hinweis,
+    picto: 'spiegel',
   ),
   CommandDef(
     'blinker',
@@ -558,6 +548,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.highlight,
     Urgency.info,
     CommandCategory.hinweis,
+    picto: 'blinker',
   ),
   CommandDef(
     'schulterblick',
@@ -565,6 +556,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.threesixty,
     Urgency.info,
     CommandCategory.hinweis,
+    picto: 'schulterblick',
   ),
   CommandDef(
     'rundumblick',
@@ -572,6 +564,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.zoom_out_map,
     Urgency.info,
     CommandCategory.hinweis,
+    picto: 'rundumblick',
   ),
   CommandDef(
     'nach_hinten',
@@ -579,6 +572,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.remove_red_eye,
     Urgency.info,
     CommandCategory.hinweis,
+    picto: 'nach_hinten',
   ),
   // Die beiden Vorfahrt-Kacheln tragen als Symbol genau das Zeichen, das am
   // Straßenrand steht – als Ersatzsymbol (Sprachkombination, fehlendes Bild)
@@ -605,6 +599,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.dangerous,
     Urgency.achtung,
     CommandCategory.hinweis,
+    // VZ 101 Gefahrstelle – das amtliche „Achtung, da ist etwas"
+    vz: '101',
   ),
   CommandDef(
     'abstand',
@@ -612,6 +608,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.social_distance,
     Urgency.achtung,
     CommandCategory.hinweis,
+    picto: 'abstand',
   ),
   CommandDef(
     'gang',
@@ -619,6 +616,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.settings,
     Urgency.info,
     CommandCategory.hinweis,
+    picto: 'gang',
   ),
   CommandDef(
     'anhalten',
@@ -647,6 +645,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.grundfahraufgabe,
     group: 'einparken',
+    picto: 'gfa_laengs',
   ),
   // Quer parken ist zwei Aufgaben, nicht eine: vorwärts und rückwärts werden
   // getrennt geübt und geprüft. Die drei Einpark-Aufgaben stehen als Gruppe in
@@ -659,6 +658,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.grundfahraufgabe,
     group: 'einparken',
+    picto: 'gfa_quer_vor',
   ),
   CommandDef(
     'gfa_quer_rueck',
@@ -667,6 +667,7 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.grundfahraufgabe,
     group: 'einparken',
+    picto: 'gfa_quer_rueck',
   ),
   CommandDef(
     'gfa_bremsung',
@@ -674,6 +675,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.crisis_alert,
     Urgency.info,
     CommandCategory.grundfahraufgabe,
+    picto: 'gfa_bremsung',
   ),
   CommandDef(
     'gfa_ecke',
@@ -681,6 +683,7 @@ const List<CommandDef> kCommandCatalog = [
     Icons.subdirectory_arrow_right,
     Urgency.info,
     CommandCategory.grundfahraufgabe,
+    picto: 'gfa_ecke',
   ),
   CommandDef(
     'gfa_umkehren',
@@ -732,6 +735,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.abfahrt,
     explanation:
         'Bremspedal treten: Der Widerstand muss fest sein und darf nicht bis zum Boden durchgehen. Das Fahrzeug darf mit angezogener Bremse nicht wegrollen.',
+    picto: 'bremse',
   ),
   CommandDef(
     'hupe',
@@ -741,6 +745,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.abfahrt,
     explanation:
         'Kurz auf die Mitte des Lenkrads drücken – die Hupe muss deutlich hörbar sein.',
+    picto: 'hupe',
   ),
   CommandDef(
     'scheibenwischer',
@@ -750,6 +755,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.abfahrt,
     explanation:
         'Wischer und Waschanlage testen. Die Wischerblätter dürfen nicht rissig sein und müssen sauber und schlierenfrei wischen.',
+    picto: 'scheibenwischer',
   ),
   CommandDef(
     'warndreieck',
@@ -768,6 +774,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.abfahrt,
     explanation:
         'Die reflektierende Weste muss griffbereit sein und beim Aussteigen an der Straße getragen werden.',
+    picto: 'warnweste',
   ),
   CommandDef(
     'verbandskasten',
@@ -788,6 +795,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Das normale Fahrlicht bei Dunkelheit. Es beleuchtet die Straße, ohne den Gegenverkehr zu blenden.',
+    picto: 'abblendlicht',
   ),
   CommandDef(
     'fernlicht',
@@ -797,6 +805,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Weitreichendes Licht für freie Strecke. Bei Gegenverkehr oder Vorausfahrenden sofort abblenden, um nicht zu blenden.',
+    picto: 'fernlicht',
   ),
   CommandDef(
     'standlicht',
@@ -806,6 +815,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Schwaches Licht, um das stehende Fahrzeug sichtbar zu machen – nicht zum Fahren bei Dunkelheit gedacht.',
+    picto: 'standlicht',
   ),
   CommandDef(
     'blinker_fz',
@@ -815,6 +825,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Zeigt Abbiegen und Spurwechsel rechtzeitig an. Vorne und hinten muss er gleichmäßig blinken.',
+    picto: 'blinker',
   ),
   CommandDef(
     'warnblinker',
@@ -824,6 +835,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Alle Blinker gleichzeitig. Warnt andere bei Panne, Stauende oder Gefahr.',
+    picto: 'warnblinker',
   ),
   CommandDef(
     'bremslicht',
@@ -833,6 +845,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Leuchtet beim Bremsen rot auf und warnt den Hintermann. Funktion am besten von einer zweiten Person prüfen lassen.',
+    picto: 'bremslicht',
   ),
   CommandDef(
     'ruecklicht',
@@ -842,6 +855,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Die roten Rückleuchten machen das Fahrzeug bei Dunkelheit von hinten sichtbar.',
+    picto: 'ruecklicht',
   ),
   CommandDef(
     'nebel',
@@ -851,6 +865,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.beleuchtung,
     explanation:
         'Nur bei Nebel, Schneefall oder Regen mit Sichtweite unter etwa 50 m einschalten.',
+    picto: 'nebel',
   ),
   CommandDef(
     'kennzeichenlicht',
@@ -871,6 +886,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.reifen,
     explanation:
         'Mindestens 1,6 mm sind vorgeschrieben. Empfohlen werden 3 mm (Sommer) bzw. 4 mm (Winter). Ein 1-Euro-Stück hilft beim Schätzen.',
+    picto: 'profil',
   ),
   CommandDef(
     'reifendruck',
@@ -889,6 +905,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.reifen,
     explanation:
         'Auf Risse, Beulen, Fremdkörper und gleichmäßigen Abrieb achten.',
+    picto: 'reifenzustand',
   ),
   CommandDef(
     'felgen',
@@ -898,6 +915,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.reifen,
     explanation:
         'Auf Beschädigungen prüfen; die Radmuttern müssen fest sitzen.',
+    picto: 'felgen',
   ),
 
   // --- Flüssigkeiten ---
@@ -909,6 +927,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.fluessigkeit,
     explanation:
         'Bei kaltem Motor auf ebener Fläche mit dem Messstab prüfen: Der Ölstand soll zwischen Min und Max liegen.',
+    picto: 'motoroel',
   ),
   CommandDef(
     'kuehlwasser',
@@ -918,6 +937,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.fluessigkeit,
     explanation:
         'Der Stand im Ausgleichsbehälter soll zwischen Min und Max liegen. Nie bei heißem Motor öffnen – Verbrühungsgefahr.',
+    picto: 'kuehlwasser',
   ),
   CommandDef(
     'bremsfluessigkeit',
@@ -927,6 +947,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.fluessigkeit,
     explanation:
         'Füllstand im Behälter zwischen Min und Max. Zu wenig kann auf Verschleiß oder eine Undichtigkeit hindeuten.',
+    picto: 'bremsfluessigkeit',
   ),
   CommandDef(
     'wischwasser',
@@ -936,6 +957,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.fluessigkeit,
     explanation:
         'Behälter auffüllen; im Winter mit Frostschutz, damit die Sicht klar bleibt.',
+    picto: 'wischwasser',
   ),
 
   // --- Assistenzsysteme ---
@@ -947,6 +969,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Antiblockiersystem: verhindert das Blockieren der Räder beim starken Bremsen. So bleibt das Auto lenkbar – Pedal fest durchtreten.',
+    picto: 'abs',
   ),
   CommandDef(
     'esp',
@@ -956,6 +979,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Elektronisches Stabilitätsprogramm: bremst einzelne Räder gezielt ab und verhindert so ein Schleudern.',
+    picto: 'esp',
   ),
   CommandDef(
     'spurhalte',
@@ -965,6 +989,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Warnt oder lenkt gegen, wenn du ohne Blinker die Fahrspur verlässt.',
+    picto: 'spurhalte',
   ),
   CommandDef(
     'notbrems',
@@ -974,6 +999,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Bremst automatisch, wenn ein Hindernis erkannt wird und du nicht rechtzeitig reagierst.',
+    picto: 'notbrems',
   ),
   CommandDef(
     'acc',
@@ -983,6 +1009,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Hält die eingestellte Geschwindigkeit und automatisch den Abstand zum Vorausfahrenden.',
+    picto: 'acc',
   ),
   CommandDef(
     'totwinkel',
@@ -992,6 +1019,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Warnt vor Fahrzeugen im toten Winkel. Den Schulterblick trotzdem immer machen.',
+    picto: 'totwinkel',
   ),
   CommandDef(
     'parkassistent',
@@ -1001,6 +1029,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.assistenz,
     explanation:
         'Unterstützt beim Einparken über Sensoren und Kamera; die Lenkung erfolgt teils automatisch.',
+    picto: 'parkassistent',
   ),
   CommandDef(
     'tempomat',
@@ -1030,6 +1059,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Den Innenspiegel so einstellen, dass die Heckscheibe möglichst vollständig im Blick ist – ohne den Kopf zu bewegen.',
+    picto: 'innenspiegel',
   ),
   CommandDef(
     'aussenspiegel_l',
@@ -1039,6 +1069,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Den linken Außenspiegel so einstellen, dass die eigene Fahrzeugseite gerade noch am inneren Rand sichtbar ist – das verkleinert den toten Winkel.',
+    picto: 'aussenspiegel_l',
   ),
   CommandDef(
     'aussenspiegel_r',
@@ -1048,6 +1079,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Den rechten Außenspiegel genauso einstellen: eigene Fahrzeugseite gerade noch sichtbar, ansonsten viel Blick auf die Fahrbahn daneben.',
+    picto: 'aussenspiegel_r',
   ),
   CommandDef(
     'gurt',
@@ -1057,6 +1089,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Straff über Becken und Schulter führen, nicht verdreht. Vor jeder Fahrt anlegen.',
+    picto: 'gurt',
   ),
   CommandDef(
     'lenkrad',
@@ -1066,6 +1099,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Höhe und Abstand so wählen, dass die Handgelenke bei ausgestreckten Armen auf dem Lenkradkranz liegen.',
+    picto: 'lenkrad',
   ),
   CommandDef(
     'zuendung',
@@ -1084,6 +1118,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Trennt Motor und Getriebe. Zum Anfahren und Schalten treten; den Schleifpunkt gefühlvoll kommen lassen.',
+    picto: 'kupplung',
   ),
   CommandDef(
     'handbremse',
@@ -1093,6 +1128,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Sichert das stehende Fahrzeug gegen Wegrollen. Vor dem Anfahren wieder lösen.',
+    picto: 'handbremse',
   ),
   CommandDef(
     'schaltung',
@@ -1102,6 +1138,7 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.einweisung,
     explanation:
         'Den zur Geschwindigkeit passenden Gang wählen. Beim Schalten die Kupplung ganz durchtreten.',
+    picto: 'schaltung',
   ),
 
   // ===== Modus FAHRSCHÜLER =====
@@ -1163,6 +1200,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.local_gas_station,
     Urgency.info,
     CommandCategory.organisation,
+    // VZ 365-52 Tankstelle
+    vz: '365-52',
   ),
   CommandDef(
     'platztausch',
@@ -1181,14 +1220,14 @@ const List<CommandDef> kCommandCatalog = [
   CommandDef(
     'trinken',
     'Trinkpause',
-    Icons.local_cafe,
+    Icons.local_drink,
     Urgency.info,
     CommandCategory.organisation,
   ),
   CommandDef(
     'gleich_fertig',
     'Gleich fertig',
-    Icons.flag,
+    Icons.sports_score,
     Urgency.info,
     CommandCategory.organisation,
   ),

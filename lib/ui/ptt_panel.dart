@@ -646,7 +646,7 @@ class _CandidateTile extends StatelessWidget {
           child: Row(
             children: [
               if (def != null)
-                TrafficSign(def: def, size: 34)
+                TrafficSign(def: def, size: 34, color: commandForeground(cmd))
               else
                 Icon(Icons.info, size: 30, color: commandForeground(cmd)),
               const SizedBox(width: 12),

@@ -193,7 +193,11 @@ class _EditorRow extends StatelessWidget {
                 color: tileColor(def),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: TrafficSign(def: def, size: 26),
+              child: TrafficSign(
+                def: def,
+                size: 26,
+                color: foregroundOn(tileColor(def)),
+              ),
             ),
             title: Text(def.tileText),
             subtitle: locked

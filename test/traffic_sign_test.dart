@@ -38,18 +38,21 @@ void main() {
         't_schritt': '325-1',
         't_zone20': '274-1-20',
         't_zone30': '274-1',
+        't_frei': '282',
         'vorfahrt_gewaehren': '205',
         'vorfahrtstrasse': '306',
+        'hindernis': '101',
         'stopp': '206',
+        'tanken': '365-52',
       },
     );
     // Zeichen und gezeichnetes Tempo-Schild schließen sich aus.
     for (final d in mitZeichen) {
       expect(d.sign, SignShape.none, reason: '${d.key} hat beides');
+      expect(d.picto, isEmpty, reason: '${d.key} hat Zeichen und Piktogramm');
     }
     // Die Tempo-Zeichen bleiben gezeichnet (die Zahl kommt aus dem Katalog).
     expect(commandByKey('t_30')!.sign, SignShape.limit);
-    expect(commandByKey('t_frei')!.sign, SignShape.ende);
   });
 
   testWidgets('jedes Zeichen rendert und bringt seinen weißen Saum mit', (
@@ -87,53 +90,70 @@ void main() {
     }
   });
 
-  group('Nachgebaute Schilder', () {
-    test('jede Kommandoart bekommt die Schildklasse ihrer Bedeutung', () {
-      final erwartet = {
-        // Fahrauftrag = Gebot (blauer Kreis, wie VZ 209).
-        'einordnen_links': SignStyle.vorschrift,
-        'folgen': SignStyle.vorschrift,
-        'rueckwaerts': SignStyle.vorschrift,
-        'gfa_laengs': SignStyle.vorschrift,
-        // Tempo = Beschränkung (roter Ring, wie VZ 274).
-        'langsamer': SignStyle.verbot,
-        'schneller': SignStyle.verbot,
-        // … außer dem Notruf, der ist eine Gefahr.
-        'bremsen': SignStyle.gefahr,
-        // Hinweise verlangen Aufmerksamkeit = Gefahrzeichen (VZ 101).
-        'schulterblick': SignStyle.gefahr,
-        'spiegel': SignStyle.gefahr,
-        'abstand': SignStyle.gefahr,
-        'anhalten': SignStyle.gefahr,
-        // Alles Erklärende informiert (blaues Rechteck, wie VZ 314).
-        'verbandskasten': SignStyle.richt,
-        'abs': SignStyle.richt,
-        'lob': SignStyle.richt,
-        'pause': SignStyle.richt,
-      };
-      for (final e in erwartet.entries) {
-        expect(commandByKey(e.key)!.signStyle, e.value, reason: e.key);
+  group('Piktogramme statt erfundener Schilder', () {
+    // Auskunft TÜV (09/2026): die App darf keine Schilder zeigen, die es an
+    // der Straße nicht gibt – auch keine „im Stil der StVO" nachgebauten.
+    // Alles ohne amtliches Zeichen ist deshalb ein flaches Piktogramm.
+    final ohneZeichen = kCommandCatalog.where((d) => !d.isSign).toList();
+
+    test('jedes eigene Piktogramm hat seine Datei', () async {
+      final eigene = ohneZeichen.where((d) => d.picto.isNotEmpty);
+      expect(eigene, isNotEmpty);
+      for (final def in eigene) {
+        final data = await rootBundle.loadString(def.pictoAsset);
+        expect(
+          data,
+          contains('<svg'),
+          reason: '${def.key} verweist auf ${def.pictoAsset}',
+        );
+        // Einfarbig: die Farbe kommt aus der App (ColorFilter), nicht aus
+        // der Datei – sonst bliebe das Bild auf gelbem Grund weiß.
+        expect(
+          data,
+          isNot(anyOf(contains('#'), contains('rgb('))),
+          reason: '${def.key}: Piktogramm trägt eigene Farben',
+        );
       }
     });
 
-    testWidgets('jedes Kommando rendert als Schild – ohne Ausnahme', (
+    testWidgets('ein Piktogramm ist kein Schild – nichts wird gemalt', (
       tester,
     ) async {
-      for (final def in kCommandCatalog) {
+      for (final def in ohneZeichen) {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: Center(child: TrafficSign(def: def, size: 96)),
+              body: Center(
+                child: TrafficSign(
+                  def: def,
+                  size: 96,
+                  color: const Color(0xFF111417),
+                ),
+              ),
             ),
           ),
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: def.key);
-        expect(
-          find.byType(TrafficSign),
-          findsOneWidget,
-          reason: '${def.key} zeichnet nichts',
+        final innen = find.descendant(
+          of: find.byType(TrafficSign),
+          matching: find.byType(CustomPaint),
         );
+        expect(innen, findsNothing, reason: '${def.key} zeichnet eine Form');
+
+        // Entweder das Material-Symbol oder das eingefärbte eigene Bild.
+        if (def.picto.isEmpty) {
+          final icon = tester.widget<Icon>(find.byType(Icon));
+          expect(icon.icon, def.icon, reason: def.key);
+          expect(icon.color, const Color(0xFF111417), reason: def.key);
+        } else {
+          final bild = tester.widget<SvgPicture>(find.byType(SvgPicture));
+          expect(
+            bild.colorFilter,
+            const ColorFilter.mode(Color(0xFF111417), BlendMode.srcIn),
+            reason: '${def.key} nimmt die Anzeigefarbe nicht an',
+          );
+        }
       }
     });
   });
