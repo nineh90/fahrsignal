@@ -188,7 +188,15 @@ Fahrlehrperson ihr eigenes Kommando ein zweites Mal. Das Schülergerät hat kein
 - **Rückfall Deutsch**: Freitext (nicht übersetzbar), unbekannter Code und ein Gerät ohne
   Stimme für die Sprache sprechen den deutschen Text. Chrome am Desktop hat z. B. keine
   türkische, arabische oder ukrainische Stimme (Stand 17.09.2026).
-- Jede neue Anweisung unterbricht die laufende; `off` und stumme Anweisungen brechen ab.
+- **Ansagen laufen nacheinander** (`QueuedSpeechOutput`, seit 19.09.2026): zwei
+  Anweisungen kurz hintereinander brachen sich vorher mitten im Wort ab. Jetzt wird die
+  aktive zu Ende gesprochen, die nächste folgt – höchstens drei warten, die älteste
+  fliegt. **Dringendes (Bremsen/Stop) unterbricht sofort** und leert die Warteschlange;
+  `off` und stumme Anweisungen ebenso. Dafür muss `speak()` melden, wann eine Ansage
+  fertig ist: im Browser über `onend`/`onerror` der Utterance (ein `cancel` kommt als
+  `error` an und zählt als fertig), in der App über die Completion-/Cancel-/Error-
+  Handler von `flutter_tts`. Meldet die Plattform nichts, springt eine Schätzung ein
+  (1,5 s + 120 ms je Zeichen). `test/speech_queue_test.dart`.
 - `SpeechOutput` (`platform/speech/`) kapselt die Stimme:
   - **Web: eigene Umsetzung gegen `speechSynthesis`** (`speech_output_web.dart`).
     `flutter_tts` verwirft im Browser eine Ansage, die direkt nach einem Abbruch kommt.

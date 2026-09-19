@@ -80,8 +80,10 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
   }
 
   /// Sprachausgabe (SAR-121), wenn der Fahrlehrer eine Sprache gewählt hat.
-  /// Alles andere – auch 'off' – bricht eine laufende Ansage ab: was nicht
-  /// mehr auf dem Schirm steht, soll auch nicht mehr im Ohr sein.
+  /// Ansagen laufen **nacheinander** (`QueuedSpeechOutput`): eine aktive wird
+  /// zu Ende gesprochen, Dringendes unterbricht sofort. Stummes – auch 'off' –
+  /// bricht ab und leert die Warteschlange: was nicht mehr auf dem Schirm
+  /// steht, soll auch nicht mehr im Ohr sein.
   void _speak(DriveCommand cmd) {
     final voice = ref.read(speechOutputProvider);
     final a = announcementFor(cmd);

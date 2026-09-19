@@ -5,6 +5,8 @@
 /// werden geschluckt.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -19,8 +21,19 @@ class DeviceSpeechOutput implements SpeechOutput {
   Future<void>? _ready;
   final _available = <String, bool>{};
 
+  /// Die laufende Ansage; erfüllt bei Ende, Abbruch oder Fehler.
+  Completer<void>? _done;
+
+  void _finish() {
+    final d = _done;
+    if (d != null && !d.isCompleted) d.complete();
+  }
+
   Future<void> _setup() async {
     try {
+      _tts.setCompletionHandler(_finish);
+      _tts.setCancelHandler(_finish);
+      _tts.setErrorHandler((_) => _finish());
       await _tts.setVolume(1);
       if (defaultTargetPlatform == TargetPlatform.iOS) {
         // Wie eine Navigationsansage: läuft auch bei Stummschalter,
@@ -71,11 +84,14 @@ class DeviceSpeechOutput implements SpeechOutput {
           ? fallback
           : say;
       await _tts.stop();
+      _finish();
       await _tts.setLanguage(u.locale);
       // Auf den Geräten ist 0,5 die normale Geschwindigkeit. Dringendes
       // etwas zügiger – es soll vor dem Ereignis zu Ende gesprochen sein.
       await _tts.setSpeechRate(urgency == Urgency.dringend ? 0.58 : 0.5);
+      final done = _done = Completer<void>();
       await _tts.speak(u.text, focus: true);
+      await done.future;
     } catch (_) {}
   }
 
@@ -88,6 +104,7 @@ class DeviceSpeechOutput implements SpeechOutput {
     try {
       await _tts.stop();
     } catch (_) {}
+    _finish();
   }
 
   @override

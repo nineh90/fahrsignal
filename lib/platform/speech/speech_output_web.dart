@@ -8,6 +8,7 @@
 /// Genau „abbrechen und Neues sagen" ist hier aber der Normalfall.
 library;
 
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
@@ -28,6 +29,8 @@ extension type _Utterance._(JSObject _) implements JSObject {
   external set rate(double v);
   external set volume(double v);
   external set voice(_Voice? v);
+  external set onend(JSFunction f);
+  external set onerror(JSFunction f);
 }
 
 extension type _Voice._(JSObject _) implements JSObject {
@@ -85,13 +88,24 @@ class WebSpeechOutput implements SpeechOutput {
         u = fallback;
         voice = _voiceFor(u.locale, voices);
       }
+      // Das Ende melden – auch ein Abbruch (`cancel`) kommt als `error`
+      // („interrupted"/„canceled") an. Beides zählt als „fertig", damit die
+      // Warteschlange weitergeht.
+      final done = Completer<void>();
+      void finish() {
+        if (!done.isCompleted) done.complete();
+      }
+
       final utt = _utterance(u.text)
         ..lang = u.locale
         ..voice = voice
-        ..rate = urgency == Urgency.dringend ? 1.15 : 1.0;
+        ..rate = urgency == Urgency.dringend ? 1.15 : 1.0
+        ..onend = finish.toJS
+        ..onerror = finish.toJS;
       synth.cancel();
       _current = utt;
       synth.speak(utt);
+      await done.future;
     } catch (_) {}
   }
 
