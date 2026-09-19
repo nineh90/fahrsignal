@@ -83,7 +83,11 @@ ein → keine Hardware nötig. Rollen: `sender` (Fahrlehrer) / `receiver` (Fahrs
 ### Nachrichtenmodell
 `DriveCommand { v, key, urgency: info|achtung|dringend, ts }` – identisch über alle Transports.
 `urgency` steuert **Farbe und Vibrationsmuster**. Sonderkommando `off` blendet die Empfänger-
-Anzeige aus. Verlauf („letzte Hinweise") nur lokal auf dem Empfänger.
+Anzeige aus: der Schirm wird **schwarz und leer** – kein Gruß, kein Verlauf, kein Logo, nur
+der gedimmte Ausgang oben rechts (Rückmeldung 19.09.2026). Vor der ersten Anweisung steht
+dagegen „Gute Fahrt", damit man sieht, dass die Verbindung steht. Die nächste Anweisung
+holt alles zurück, der Verlauf läuft weiter. Verlauf („letzte Hinweise") nur lokal auf dem
+Empfänger.
 
 ### Prüfungsmodus
 

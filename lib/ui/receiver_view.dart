@@ -23,6 +23,11 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
   DriveCommand? _current;
   final List<DriveCommand> _history = [];
 
+  /// „Anzeige aus" (Rückmeldung 19.09.2026): der Schirm wird **schwarz und
+  /// leer** – kein Gruß, kein Verlauf, kein Logo. Vor der ersten Anweisung
+  /// dagegen steht „Gute Fahrt", damit man sieht, dass die Verbindung steht.
+  bool _off = false;
+
   // Einblend-Puls: startet bei jedem neuen Kommando (sofortige Erkennbarkeit).
   late final AnimationController _pop = AnimationController(
     vsync: this,
@@ -54,8 +59,10 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
     setState(() {
       if (cmd.isOff) {
         _current = null; // 'off' blendet die Anzeige aus
+        _off = true;
       } else {
         _current = cmd;
+        _off = false;
         _history.insert(0, cmd);
         if (_history.length > 2) _history.removeLast();
       }
@@ -138,29 +145,30 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
       backgroundColor: bg,
       body: Stack(
         children: [
-          Center(
-            child: Padding(
-              // Unten ist Platz für den Verlauf (_HistoryStrip) reserviert.
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 205),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: AnimatedBuilder(
-                  animation: _pop,
-                  builder: (context, child) {
-                    if (cmd == null || reduceMotion) return child!;
-                    final t = Curves.easeOutBack.transform(
-                      _pop.value.clamp(0, 1),
-                    );
-                    return Transform.scale(
-                      scale: 0.82 + 0.18 * t,
-                      child: child,
-                    );
-                  },
-                  child: _CommandDisplay(cmd: cmd, fg: fg),
+          if (!_off)
+            Center(
+              child: Padding(
+                // Unten ist Platz für den Verlauf (_HistoryStrip) reserviert.
+                padding: const EdgeInsets.fromLTRB(20, 40, 20, 205),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: AnimatedBuilder(
+                    animation: _pop,
+                    builder: (context, child) {
+                      if (cmd == null || reduceMotion) return child!;
+                      final t = Curves.easeOutBack.transform(
+                        _pop.value.clamp(0, 1),
+                      );
+                      return Transform.scale(
+                        scale: 0.82 + 0.18 * t,
+                        child: child,
+                      );
+                    },
+                    child: _CommandDisplay(cmd: cmd, fg: fg),
+                  ),
                 ),
               ),
             ),
-          ),
           // kurzer weißer Blitz beim Einblenden
           if (!reduceMotion)
             IgnorePointer(
@@ -188,7 +196,7 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
                 ),
               ),
             ),
-          if (_past.isNotEmpty)
+          if (!_off && _past.isNotEmpty)
             Positioned(
               left: 0,
               right: 0,
@@ -196,27 +204,30 @@ class _ReceiverViewState extends ConsumerState<ReceiverView>
               child: _HistoryStrip(past: _past, fg: fg),
             ),
           // Dezente Marke oben links (nicht bedienbar).
-          Positioned(
-            top: 14,
-            left: 16,
-            child: Opacity(
-              opacity: 0.9,
-              // Helle Variante überall außer auf Gelb ("achtung") – dort ist
-              // der Grund hell und die Schrift dunkel.
-              child: SarahLogo(
-                size: 34,
-                signet: true,
-                onDark: fg.computeLuminance() > 0.5,
+          if (!_off)
+            Positioned(
+              top: 14,
+              left: 16,
+              child: Opacity(
+                opacity: 0.9,
+                // Helle Variante überall außer auf Gelb ("achtung") – dort ist
+                // der Grund hell und die Schrift dunkel.
+                child: SarahLogo(
+                  size: 34,
+                  signet: true,
+                  onDark: fg.computeLuminance() > 0.5,
+                ),
               ),
             ),
-          ),
           // Dezenter Ausgang oben rechts – klein & mit Rückfrage, damit die
           // Sicherheits-Leitplanke "keine versehentliche Bedienung" gewahrt bleibt.
+          // Bleibt auch auf dem schwarzen Schirm (noch dezenter), sonst käme
+          // der Schüler nach „Anzeige aus" nicht mehr zurück zum Start.
           Positioned(
             top: 6,
             right: 6,
             child: Opacity(
-              opacity: 0.55,
+              opacity: _off ? 0.3 : 0.55,
               child: IconButton(
                 tooltip: 'Zurück zum Start',
                 iconSize: 22,

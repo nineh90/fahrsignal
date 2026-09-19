@@ -46,11 +46,25 @@ void main() {
     expect(tester.widget<Text>(find.text('Gang wechseln')).style!.fontSize, 21);
     expect(find.text('ZUVOR'), findsOneWidget);
 
-    // Anzeige aus: der zuletzt gezeigte bleibt stehen.
+    // Anzeige aus: schwarz und leer – kein Verlauf, kein Gruß, kein Logo
+    // (Rückmeldung 19.09.2026). Nur der gedimmte Ausgang bleibt.
     await senden(tester, kOffKey);
-    expect(find.text('Schulterblick'), findsOneWidget);
+    expect(find.text('Schulterblick'), findsNothing);
     expect(find.text('Gang wechseln'), findsNothing);
+    expect(find.text('ZUVOR'), findsNothing);
+    expect(find.text('Gute Fahrt'), findsNothing);
+    expect(find.byType(TrafficSign), findsNothing);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      Colors.black,
+    );
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    // Die nächste Anweisung holt die Anzeige zurück, der Verlauf läuft weiter.
+    await senden(tester, 'abstand');
+    expect(find.text('ABSTAND'), findsOneWidget);
+    expect(find.text('Schulterblick'), findsOneWidget, reason: 'zuvor');
 
     // Langer Hinweis: gekürzt, nicht übergelaufen, Schrift bleibt groß.
     await senden(tester, 'reihenfolge');
