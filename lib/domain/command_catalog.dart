@@ -1007,6 +1007,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.local_car_wash,
     Urgency.info,
     CommandCategory.fluessigkeit,
+    // Weicher Trennstrich: bricht an der Wortfuge.
+    tileLabel: 'Scheiben\u00ADwaschwasser',
     explanation:
         'Behälter auffüllen; im Winter mit Frostschutz, damit die Sicht klar bleibt.',
     picto: 'wischwasser',
@@ -1059,6 +1061,8 @@ const List<CommandDef> kCommandCatalog = [
     Icons.social_distance,
     Urgency.info,
     CommandCategory.assistenz,
+    // Weicher Trennstrich: bricht an der Wortfuge.
+    tileLabel: 'Abstands\u00ADtempomat',
     explanation:
         'Hält die eingestellte Geschwindigkeit und automatisch den Abstand zum Vorausfahrenden.',
     picto: 'acc',
