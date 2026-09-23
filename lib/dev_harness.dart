@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers.dart';
@@ -19,6 +21,11 @@ class _DevApp extends ConsumerWidget {
     return MaterialApp(
       title: 'FahrSignal Dev',
       debugShowCheckedModeBanner: false,
+      // Am Desktop scrollt Flutter mit der Maus nur übers Rad – Ziehen wie
+      // mit dem Finger auf dem iPad muss man eigens erlauben.
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: PointerDeviceKind.values.toSet(),
+      ),
       theme: fahrSignalTheme(Brightness.light),
       darkTheme: fahrSignalTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),
