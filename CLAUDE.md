@@ -365,7 +365,7 @@ dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 | Vorfahrtstraße | VZ 306 |
 | Vorfahrt | VZ 301 – Vorfahrt an der nächsten Kreuzung; „du hast Vorfahrt" landet seit dem 19.09. hier, nicht mehr bei 306 |
 | Abknickende Vorfahrt links / rechts | VZ 306 **mit Zusatzzeichen 1002-10 / 1002-20** darunter → `vz306-1002-10.svg` – die Datei ist die Kombination, wie sie am Mast hängt (kein erfundenes Zeichen: beide Teile amtlich, aus den zwei Wikimedia-SVGs zusammengesetzt, Zusatzzeichen auf 72 % wie 420 unter 600 mm). Hochformat → `_aspect` 600/1057, `_optisch` 1,25 – mehr sprengt die Kachel bei zweizeiliger Beschriftung |
-| Tastgeschwindigkeit | kein Zeichen (1–3 km/h, langsames Herantasten) → Piktogramm Schnecke mit Ausrufezeichen, `t_tast`, im Prüfungsmodus gesperrt wie alle Tempovorgaben |
+| Tastgeschwindigkeit | kein Zeichen (1–2 km/h, langsames Herantasten) → Piktogramm Schnecke, im Gehäuse „1–2 km/h“ als Strichschrift (SAR-128), `t_tast`, im Prüfungsmodus gesperrt wie alle Tempovorgaben |
 | Halten | VZ 314 (Parken) – seit SAR-119 standardmäßig ausgeblendet |
 | Stop | VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft |
 | Hindernis | VZ 101 (Gefahrstelle) – das amtliche „Achtung, da ist etwas" |

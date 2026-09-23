@@ -454,15 +454,17 @@ const List<CommandDef> kCommandCatalog = [
     // Mit Wort: die Zahl steht eben nicht darauf.
     vz: '325-1',
   ),
-  // Tastgeschwindigkeit (1–3 km/h): langsames Herantasten an unübersichtliche
-  // Stellen. Kein amtliches Zeichen – die Schnecke mit Ausrufezeichen.
+  // Tastgeschwindigkeit (1–2 km/h): langsames Herantasten an unübersichtliche
+  // Stellen. Kein amtliches Zeichen – die Schnecke, im Gehäuse „1–2 km/h".
+  // Volles Wort auf der Kachel (SAR-128), nicht mehr „Tasttempo".
   CommandDef(
     't_tast',
     'Tastgeschwindigkeit',
     Icons.directions_walk,
     Urgency.achtung,
     CommandCategory.tempo,
-    tileLabel: 'Tasttempo',
+    // Weicher Trennstrich: bricht an der Wortfuge statt „Tastgeschwindigke/it".
+    tileLabel: 'Tast\u00ADgeschwindigkeit',
     picto: 't_tast',
   ),
   // Zonenschilder statt Einzelanordnung: VZ 274.1 gilt bis zum Ende der Zone

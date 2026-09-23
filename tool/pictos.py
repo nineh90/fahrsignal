@@ -238,14 +238,24 @@ def tacho(needle_deg, sign):
 
 P['langsamer'] = tacho(150, '-')
 P['schneller'] = tacho(30, '+')
-# Tastgeschwindigkeit (1–3 km/h): Schnecke mit Ausrufezeichen – „ganz langsam
-# herantasten". Gehäuse als Spirale, Körper mit Fühlern.
+# Tastgeschwindigkeit (1–2 km/h, SAR-128): Schnecke, im Gehäuse steht die
+# Vorgabe „1–2 km/h" – als Strichschrift, nicht als <text>: so sieht sie ohne
+# Schriftart auf jedem Gerät gleich aus. Das Gehäuse ist deshalb ein großer
+# Ring statt Spirale; „km/h" ist auf der Kachel nur Andeutung, auf dem
+# Schülerschirm (150–260 px) gut lesbar.
 P['t_tast'] = svg(
-    rect(4, 72, 72, 14, 7),                    # Fuß
-    rect(58, 46, 18, 32, 8),                   # Kopf
-    stroke('M62,48 L55,32 M72,48 L78,34', 7),  # Fühler
-    circle(36, 50, 22, 11), circle(36, 50, 7), # Gehäuse
-    stroke('M90,6 V30', 11), circle(90, 44, 6))
+    rect(2, 80, 94, 14, 7),                    # Fuß
+    rect(78, 50, 18, 44, 9),                   # Kopf
+    stroke('M82,52 L76,36 M92,52 L98,38', 6),  # Fühler
+    circle(40, 43, 36, 7),                     # Gehäuse
+    stroke('M17,26 L24,19 V47', 7),            # 1
+    stroke('M32,35 H39', 5),                   # –
+    stroke('M48,25 Q49,19 55,19 Q62,19 62,26 Q62,31 56,37 L48,47 H63', 7),  # 2
+    stroke('M20,52 V65 M26,56 L20,61 L26,65'   # k
+           ' M30,65 V56 M30,59 Q30,56 33,56 Q35,56 35,59 V65'
+           ' M35,59 Q35,56 38,56 Q41,56 41,59 V65'  # m
+           ' M49,52 L44,65'                     # /
+           ' M53,52 V65 M53,59 Q53,56 56,56 Q60,56 60,59 V65', 3.5))  # h
 
 # Bremsen: das Cockpit-Symbol „(!)" – kein Kreis mit Rand, sondern zwei Bögen.
 P['bremsen'] = svg(
