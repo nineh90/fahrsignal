@@ -158,9 +158,11 @@ steht „Hell/Dunkel" jetzt auch – der Header war auf dem Handy voll.
 - **Gespeichert auf dem Gerät** (`shared_preferences`, im Browser localStorage) unter
   `tile_layout_v1`. Keine Konten → jedes Tablet hat seine eigene Anordnung.
 - **Ausgeblendet ist nicht gelöscht.** Standardmäßig aus (`kDefaultHiddenKeys`):
-  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts, Halten,
-  Reihenfolge. Die
+  Abbiegen links/rechts, Links/Rechts einordnen, Einordnen, Rückwärts, Halten. Die
   Sprachleiste erkennt sie weiter, der Schüler sieht weiter ihr Zeichen.
+  „Reihenfolge" (Blinker – Innenspiegel – Außenspiegel – Schulterblick) ist dagegen
+  seit dem 23.09.2026 ganz aus dem Katalog; gesprochen wird die Merkkette zur Kombi aus
+  den Einzelkacheln. Ein alter gespeicherter Key wird beim Laden ignoriert.
 - **Notkommandos (`kExamSafetyKeys`) lassen sich nicht ausblenden** – Schalter gesperrt.
 - Neue Katalog-Kacheln erscheinen auch bei gespeicherter Anordnung von selbst, hinter
   ihrem Katalog-Vorgänger. Die Katalogposition ist also weiter wichtig („Straße" steht

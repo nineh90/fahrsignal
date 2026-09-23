@@ -138,24 +138,4 @@ void main() {
       findsNothing,
     );
   });
-
-  testWidgets('„Reihenfolge" ist ausgeblendet, trägt aber ihr Kurzlabel', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: SenderGrid())),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Reihenfolge'), findsNothing);
-    expect(find.text('Schulterblick'), findsOneWidget);
-    // Wer sie über „Kacheln anpassen" zurückholt, sieht das Kurzlabel.
-    final def = commandByKey('reihenfolge')!;
-    expect(def.tileText, 'Reihenfolge');
-    expect(def.label, 'Blinker – Innenspiegel – Außenspiegel – Schulterblick');
-  });
 }

@@ -12,7 +12,6 @@ const Set<String> kDefaultHiddenKeys = {
   'rueckwaerts',
   // SAR-119: Halten fliegt aus dem Tempo-Bereich.
   'parken',
-  'reihenfolge',
 };
 
 /// Die Standard-Ausblendungen, die gespeicherte Anordnungen ohne

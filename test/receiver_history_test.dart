@@ -67,10 +67,16 @@ void main() {
     expect(find.text('Schulterblick'), findsOneWidget, reason: 'zuvor');
 
     // Langer Hinweis: gekürzt, nicht übergelaufen, Schrift bleibt groß.
-    await senden(tester, 'reihenfolge');
+    await FakeTransport('DEV').sendCommand(
+      DriveCommand.freitext(
+        'Nach der Ampel die zweite Straße rechts und dann langsam weiter',
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await senden(tester, 'links');
     expect(tester.takeException(), isNull);
-    final lang = find.textContaining('Innenspiegel');
+    final lang = find.textContaining('zweite Straße rechts');
     expect(tester.widget<Text>(lang).style!.fontSize, 21);
     expect(tester.getRect(lang).right, lessThanOrEqualTo(390));
   });
@@ -132,8 +138,8 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: ReceiverView())),
     );
-    await senden(tester, 'reihenfolge');
-    final wort = find.textContaining('INNENSPIEGEL');
+    await senden(tester, 'nach_hinten');
+    final wort = find.text('NACH HINTEN SCHAUEN');
     final text = tester.widget<Text>(wort);
     expect(text.maxLines, 1);
     // Eine Zeile: nicht höher als die Schriftgröße samt Zeilenhöhe.

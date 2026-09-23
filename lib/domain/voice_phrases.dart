@@ -154,7 +154,6 @@ const Map<VoiceLanguage, Map<String, String>> kVoicePhrases = {
     't_100': 'Speed limit 100',
     't_frei': 'End of speed limit',
     // Hinweise
-    'reihenfolge': 'Indicator, rear-view mirror, side mirror, shoulder check',
     'spiegel': 'Mirrors',
     'blinker': 'Indicator',
     'schulterblick': 'Shoulder check',
@@ -274,7 +273,6 @@ const Map<VoiceLanguage, Map<String, String>> kVoicePhrases = {
     't_70': 'Hız sınırı 70',
     't_100': 'Hız sınırı 100',
     't_frei': 'Hız sınırı sonu',
-    'reihenfolge': 'Sinyal, iç ayna, dış ayna, omuz kontrolü',
     'spiegel': 'Aynalar',
     'blinker': 'Sinyal',
     'schulterblick': 'Omuz kontrolü',
@@ -384,7 +382,6 @@ const Map<VoiceLanguage, Map<String, String>> kVoicePhrases = {
     't_70': 'السرعة القصوى 70',
     't_100': 'السرعة القصوى 100',
     't_frei': 'نهاية تحديد السرعة',
-    'reihenfolge': 'الإشارة، المرآة الداخلية، المرآة الجانبية، النظر فوق الكتف',
     'spiegel': 'المرايا',
     'blinker': 'الإشارة',
     'schulterblick': 'انظر فوق كتفك',
@@ -494,8 +491,6 @@ const Map<VoiceLanguage, Map<String, String>> kVoicePhrases = {
     't_70': 'Обмеження 70',
     't_100': 'Обмеження 100',
     't_frei': 'Кінець обмеження швидкості',
-    'reihenfolge':
-        'Поворотник, внутрішнє дзеркало, бокове дзеркало, погляд через плече',
     'spiegel': 'Дзеркала',
     'blinker': 'Поворотник',
     'schulterblick': 'Поглянь через плече',
@@ -605,8 +600,6 @@ const Map<VoiceLanguage, Map<String, String>> kVoicePhrases = {
     't_70': 'Ограничение 70',
     't_100': 'Ограничение 100',
     't_frei': 'Конец ограничения скорости',
-    'reihenfolge':
-        'Поворотник, салонное зеркало, боковое зеркало, взгляд через плечо',
     'spiegel': 'Зеркала',
     'blinker': 'Поворотник',
     'schulterblick': 'Посмотри через плечо',

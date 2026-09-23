@@ -35,7 +35,6 @@ void main() {
         'schulterblick',
         'spiegel',
         'blinker',
-        'reihenfolge',
         'abstand',
         'hindernis',
         'lob',

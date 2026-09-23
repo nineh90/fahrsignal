@@ -548,14 +548,6 @@ const List<CommandDef> kCommandCatalog = [
 
   // --- Hinweise ---
   CommandDef(
-    'reihenfolge',
-    'Blinker – Innenspiegel – Außenspiegel – Schulterblick',
-    Icons.format_list_numbered,
-    Urgency.info,
-    CommandCategory.hinweis,
-    tileLabel: 'Reihenfolge',
-  ),
-  CommandDef(
     'spiegel',
     'Spiegel',
     Icons.visibility,

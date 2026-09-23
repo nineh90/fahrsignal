@@ -125,14 +125,13 @@ void main() {
         'hidden': ['abbiegen_links', 'abbiegen_rechts'],
       });
       expect(alt.isHidden('parken'), isTrue);
-      expect(alt.isHidden('reihenfolge'), isTrue);
       expect(alt.isHidden('rueckwaerts'), isFalse, reason: 'Wahl bleibt');
     });
 
     test('wieder Eingeblendetes bleibt eingeblendet', () {
-      final l = TileLayout.standard.withHidden('reihenfolge', false);
+      final l = TileLayout.standard.withHidden('parken', false);
       final back = laden(l.toJson());
-      expect(back.isHidden('reihenfolge'), isFalse);
+      expect(back.isHidden('parken'), isFalse);
     });
   });
 
