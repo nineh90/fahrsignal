@@ -1,0 +1,6 @@
+# Eigenes Mini-Paket nur für den Container: der Relay braucht kein Flutter,
+# das Hauptpaket ließe sich im Dart-Image gar nicht auflösen.
+name: fahrsignal_relay
+publish_to: none
+environment:
+  sdk: ^3.12.0

@@ -41,14 +41,10 @@ jobs:
       - run: flutter pub get
 
       - name: Web-App bauen
-        # Die beiden Werte kamen bisher aus den Vercel-Env-Vars. Sie landen im
-        # ausgelieferten Bundle - das ist so vorgesehen, der Supabase-Key ist
-        # ein publishable Key. main.dart trimmt sie zusaetzlich, weil ein
-        # angehaengter Zeilenumbruch Supabases Uri.parse sprengt.
-        run: |
-          flutter build web --release \
-            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
-            --dart-define=SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}"
+        # Keine Schluessel mehr: die App verbindet sich mit dem Relay neben
+        # der Seite (wss://<seite>/ws, Container fahrsignal-relay). Die alten
+        # Secrets SUPABASE_URL/SUPABASE_KEY werden nicht mehr gebraucht.
+        run: flutter build web --release
 
       - name: Grosse Dateien vorkomprimieren
         # nginx liefert diese .gz per gzip_static aus: beste Kompressionsrate,

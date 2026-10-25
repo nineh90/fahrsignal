@@ -76,6 +76,44 @@ services:
 
       - "traefik.http.routers.fahrsignal.middlewares=fahrsignal-auth@docker,fahrsignal-noindex@docker"
 
+  relay:
+    # Reicht die Anweisungen zwischen den beiden Geräten im Auto weiter
+    # (lib/transport/relay_server.dart). Löst seit dem 25.10.2026 Supabase
+    # Realtime ab: das Gratis-Projekt pausierte nach sieben Tagen ohne
+    # Datenbankzugriff, und FahrSignal greift nie auf die Datenbank zu.
+    #
+    # Gebaut wird hier auf dem Server, aber nur bei Änderungen am Relay:
+    # deploy/relay/hochladen.sh. Der Push-Deploy fasst ihn nicht an.
+    build: ../relay
+    image: fahrsignal-relay:aktuell
+    container_name: fahrsignal-relay
+    restart: unless-stopped
+    environment:
+      # Nur Seiten von hier dürfen den Relay aus dem Browser nutzen.
+      FS_ORIGINS: "https://fahrsignal.fahrlehrerinsarah.de"
+    networks:
+      - n8n_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=n8n_default"
+
+      # Derselbe Hostname wie die App, nur der Pfad /ws. Damit gilt dasselbe
+      # Zertifikat, und die App findet den Relay ohne Konfiguration
+      # (main.dart: wss://<seite>/ws). Die Priorität hebt die Route sicher
+      # über die der App, die sonst alles unter dem Hostnamen fängt.
+      - "traefik.http.routers.fahrsignal-relay.rule=Host(`fahrsignal.fahrlehrerinsarah.de`) && Path(`/ws`)"
+      - "traefik.http.routers.fahrsignal-relay.priority=100"
+      - "traefik.http.routers.fahrsignal-relay.entrypoints=websecure"
+      - "traefik.http.routers.fahrsignal-relay.tls=true"
+      - "traefik.http.routers.fahrsignal-relay.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.fahrsignal-relay.loadbalancer.server.port=8080"
+
+      # BEWUSST OHNE fahrsignal-auth: Safari schickt die Basic-Auth-Daten
+      # der Seite beim WebSocket-Handshake nicht zuverlässig mit (WebKit-Bug
+      # 80362) – auf dem iPhone käme sonst keine Verbindung zustande. Über
+      # den Relay ist nichts abrufbar; er spiegelt nur zwischen Geräten, die
+      # denselben Raumcode kennen. Fremde Webseiten hält FS_ORIGINS ab.
+
 networks:
   n8n_default:
     external: true

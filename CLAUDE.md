@@ -72,8 +72,11 @@ synchronisierte Daten immer über den Transport führen, nie direkt gegen BLE/Cl
 - **`BleTransport`** – lokaler Standardweg der echten App: **offline & iOS↔Android** über Bluetooth
   Low Energy (GATT). Empfänger = Peripheral, Sender = Central. Größtes Risiko: Peripheral-Rolle
   auf iOS → per Spike auf echten Geräten verifizieren, bevor darauf aufgebaut wird.
-- **`CloudTransport`** – Fallback über managed Realtime (EU-Region, DSGVO); lokal testbar über
-  Firebase Emulator / Supabase local.
+- **`WsTransport`** – der Weg übers Netz, live im Einsatz: eigener **WebSocket-Relay** auf dem
+  VPS (`wss://fahrsignal.fahrlehrerinsarah.de/ws`), siehe „WebSocket-Relay“ unter Hosting.
+  Bis zum 25.10.2026 lief das über Supabase Realtime – abgelöst, weil das Gratis-Projekt
+  nach sieben Tagen ohne *Datenbank*-Zugriff pausierte und FahrSignal nie auf die
+  Datenbank zugreift.
 - **`HybridTransport`** – wählt BLE, fällt automatisch auf Cloud zurück, meldet aktiven Kanal an UI.
 
 Transport wird per **Riverpod-Provider** injiziert. In Dev/Test hängt der Provider `FakeTransport`
@@ -227,10 +230,9 @@ lib/
 - **Schnellster Loop – Split-Screen (empfohlen):** `flutter run -d linux` mit `dev_harness.dart`
   als Entry (`flutter run -d linux -t lib/dev_harness.dart`). Ein Fenster zeigt Sender **und**
   Empfänger; ein Tipp im Sender-Grid erscheint sofort in der Empfängeransicht.
-- **Zwei getrennte Fenster / zweites Gerät im LAN:** optionaler kleiner WebSocket-Relay
-  (`web_socket_channel` + ein 30-Zeilen-Dart-Server), der Nachrichten je Raumcode weiterreicht –
-  analog zum `BroadcastChannel` der ursprünglichen Web-Demo.
-- **Cloud-Transport lokal:** gegen **Firebase Emulator Suite** / **Supabase local (Docker)** testen.
+- **Zwei getrennte Fenster / zweites Gerät im LAN:** `./run_local.sh chrome` startet den
+  Relay (`bin/relay_server.dart`, Port 8080) mit; über http verbindet sich die App von selbst
+  mit `ws://<host>:8080`. Ein anderer Relay per `--dart-define=RELAY_URL=wss://…`.
 - `flutter test` läuft deterministisch gegen `FakeTransport` – kein Netz, keine Hardware.
 - `BleTransport` **zuletzt und nur auf zwei echten Geräten** verifizieren.
 
@@ -617,7 +619,8 @@ damit nicht.
 | `deploy/docker-compose.yml` | nginx-Container + Traefik-Route, hängt am Netz `n8n_default` |
 | `deploy/nginx.conf` | Auslieferung, `gzip_static`, Cache-Regeln |
 | `deploy/deploy.sh` | liegt auf dem Server als `/docker/fahrsignal/deploy.sh` |
-| GitHub Secrets | `SUPABASE_URL`, `SUPABASE_KEY`, `VPS_HOST`, `VPS_SSH_KEY` |
+| `deploy/relay/` | Relay-Container (Dockerfile, Einstieg, `hochladen.sh`) |
+| GitHub Secrets | `VPS_HOST`, `VPS_SSH_KEY` (`SUPABASE_*` sind Altlast, ungenutzt) |
 | `/docker/fahrsignal/deploy/.env` | `FS_AUTH` (bcrypt) — **nicht** im Repo, das ist öffentlich |
 
 Was beim Anfassen leicht schiefgeht:
@@ -636,6 +639,35 @@ Was beim Anfassen leicht schiefgeht:
   Bildschirm erzeugt.
 - Ein Release liegt bei ~25 MB, die letzten fünf bleiben liegen. Zurückschwenken von Hand:
   `cd /docker/fahrsignal/site && ln -sfn releases/<stand> www.neu && mv -T www.neu www`
+
+### WebSocket-Relay
+
+Die Anweisungen laufen über einen eigenen Relay (`lib/transport/relay_server.dart`) im
+Container `fahrsignal-relay` neben der App. Traefik routet `…/ws` dorthin, alles andere
+an nginx. Der Relay spiegelt je Raumcode, liest nichts und speichert nichts.
+
+**Der Push-Deploy fasst den Relay nicht an** – der Deploy-Schlüssel darf nur `deploy.sh`
+ausführen. Nach Änderungen an `relay_server.dart`, `deploy/relay/` oder
+`deploy/docker-compose.yml`: `deploy/relay/hochladen.sh` (SSH-Alias `nils-vps`,
+Benutzer `kevin` mit Docker und sudo). Das Skript baut auf dem Server neu (Dart gepinnt,
+Laufzeit-Image ~5 MB ohne Betriebssystem) und startet nur den Relay neu; die Geräte
+verbinden sich danach von selbst wieder.
+
+Was `WsTransport` im Auto aushalten muss:
+
+- **Funklöcher:** Heartbeat alle 4 s, nach 10 s ohne Antwort gilt die Verbindung als
+  tot → beide Geräte warnen, Neuaufbau nach 0,5 – 1 – 2 – 4 – 5 s.
+- **„Verbunden“ erst nach Bestätigung des Beitritts** (`joined`), nicht schon beim
+  offenen Socket.
+- **Ohne Verbindung Gesendetes verfällt.** Eine Anweisung, die nach dem Funkloch
+  ankommt, ist im Verkehr falsch.
+- `test/ws_transport_test.dart` spielt Neustart des Relays und stilles Verschlucken nach.
+
+**`/ws` steht nicht hinter dem Passwortschutz.** Safari schickt die Basic-Auth-Daten der
+Seite beim WebSocket-Handshake nicht zuverlässig mit (WebKit-Bug 80362) – auf dem iPhone
+käme keine Verbindung zustande. Abrufbar ist über den Relay nichts; fremde Webseiten
+hält die Origin-Prüfung (`FS_ORIGINS`) ab. Das ist dieselbe Lage wie vorher mit
+Supabase, dessen Schlüssel im Bundle stand.
 
 ### Passwortschutz — zur Abnahme entfernen
 

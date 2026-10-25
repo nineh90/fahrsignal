@@ -44,8 +44,9 @@ Produktidee: Sarah. Zielgeräte: **iPhone/iPad + Android**. Erste Zielgruppe: iP
 
 ### 3.3 Cloud-Fallback
 - Greift, wenn kein lokales Pairing möglich ist (z. B. Ersteinrichtung, Test aus der Ferne).
-- Managed Realtime mit **EU-Hosting** (DSGVO): z. B. Supabase Realtime (Broadcast-Channels)
-  oder Firebase RTDB (europäische Region). Raum = Channel/Pfad, wie in der Demo.
+- **Entschieden (25.10.2026): eigener WebSocket-Relay auf dem VPS** (Deutschland, kein
+  Drittanbieter), Raum = Raumcode. Vorher Supabase Realtime – das Gratis-Projekt pausierte
+  nach sieben Tagen ohne Datenbankzugriff, und Broadcast zählt nicht als Zugriff.
 - Bewusst **zweitrangig**: Für den Fahrbetrieb ist BLE der Standardweg.
 
 ### 3.4 Transport-Abstraktion (aus der Demo übernommen)
@@ -166,5 +167,5 @@ Entwicklung nicht davon abhängen.
 ## 10. Offene Punkte & Risiken
 - **BLE-Peripheral auf iOS** ist das größte technische Risiko → deshalb Phase 1 als Spike.
 - BLE-Latenz/Reichweite im realen Fahrzeug messen.
-- Cloud-Anbieter final wählen (Supabase vs. Firebase vs. Ably) – nach DSGVO & Kosten.
+- ~~Cloud-Anbieter final wählen~~ → eigener Relay auf dem VPS (25.10.2026).
 - Rechtliches (Haftung, StVO/Ausbildungsrecht) vor gewerblichem Einsatz klären.

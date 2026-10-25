@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Startet FahrSignal lokal mit der Supabase-Konfiguration aus .env.
-# Ohne diese Werte fällt main.dart auf den lokalen WS-Relay zurück.
+# Startet FahrSignal lokal mit dem WebSocket-Relay aus bin/relay_server.dart.
+# Der Relay läuft im Hintergrund auf Port 8080 und endet mit der App.
+# Ein zweites Gerät im WLAN erreicht ihn über die Adresse dieses Rechners.
 #
 #   ./run_local.sh            # Standard: Linux-Desktop
 #   ./run_local.sh chrome     # im Browser
@@ -9,26 +10,8 @@ cd "$(dirname "$0")"
 
 DEVICE="${1:-linux}"
 
-if [ ! -f .env ]; then
-  echo ".env fehlt — lege sie mit SUPABASE_URL und SUPABASE_KEY an." >&2
-  exit 1
-fi
+dart run bin/relay_server.dart &
+RELAY=$!
+trap 'kill "$RELAY" 2>/dev/null || true' EXIT
 
-# .env einlesen (Kommentare/Leerzeilen ignorieren).
-set -a
-# shellcheck disable=SC1091
-source .env
-set +a
-
-# Werte trimmen: ein versehentliches Leerzeichen sprengt Supabases Uri.parse.
-URL="$(echo "${SUPABASE_URL:-}" | xargs)"
-KEY="$(echo "${SUPABASE_KEY:-}" | xargs)"
-
-if [ -z "$URL" ] || [ -z "$KEY" ]; then
-  echo "SUPABASE_URL oder SUPABASE_KEY ist leer in .env." >&2
-  exit 1
-fi
-
-exec flutter run -d "$DEVICE" \
-  --dart-define=SUPABASE_URL="$URL" \
-  --dart-define=SUPABASE_KEY="$KEY"
+flutter run -d "$DEVICE"
