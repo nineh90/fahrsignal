@@ -160,17 +160,6 @@ const Map<String, List<String>> kCommandPhrases = {
     'schritt tempo',
     '4 bis 7',
   ],
-  't_tast': [
-    'tastgeschwindigkeit',
-    'tasttempo',
-    'tast tempo',
-    'antasten',
-    'herantasten',
-    'rantasten',
-    'langsam antasten',
-    'langsam rantasten',
-    'schneckentempo',
-  ],
   't_30': ['tempo 30', '30', '30 fahren'],
   't_40': ['tempo 40', '40', '40 fahren'],
   't_zone20': [

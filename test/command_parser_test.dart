@@ -26,7 +26,6 @@ void main() {
         'du hast Vorfahrt': 'vorfahrt',
         'Vorfahrt an der nächsten Kreuzung': 'vorfahrt',
         'abknickende Vorfahrt links': 'abknickend_links',
-        'Tastgeschwindigkeit': 't_tast',
       }.entries) {
         final r = parseUtterance(pair.key);
         expect(r.key, pair.value, reason: pair.key);

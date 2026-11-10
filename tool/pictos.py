@@ -249,24 +249,6 @@ def tacho(needle_deg, sign):
 
 P['langsamer'] = tacho(150, '-')
 P['schneller'] = tacho(30, '+')
-# Tastgeschwindigkeit (4–7 km/h, Sarah 11/2026; vorher 1–2 km/h, SAR-128):
-# Schnecke, im Gehäuse steht die Vorgabe „4–7 km/h" – als Strichschrift, nicht als <text>: so sieht sie ohne
-# Schriftart auf jedem Gerät gleich aus. Das Gehäuse ist deshalb ein großer
-# Ring statt Spirale; „km/h" ist auf der Kachel nur Andeutung, auf dem
-# Schülerschirm (150–260 px) gut lesbar.
-P['t_tast'] = svg(
-    rect(2, 80, 94, 14, 7),                    # Fuß
-    rect(78, 50, 18, 44, 9),                   # Kopf
-    stroke('M82,52 L76,36 M92,52 L98,38', 6),  # Fühler
-    circle(40, 43, 36, 7),                     # Gehäuse
-    stroke('M25,21 L16,38 H31 M26,29 V47', 7),  # 4
-    stroke('M35,35 H41', 5),                   # –
-    stroke('M46,22 H60 L50,47', 7),            # 7
-    stroke('M20,52 V65 M26,56 L20,61 L26,65'   # k
-           ' M30,65 V56 M30,59 Q30,56 33,56 Q35,56 35,59 V65'
-           ' M35,59 Q35,56 38,56 Q41,56 41,59 V65'  # m
-           ' M49,52 L44,65'                     # /
-           ' M53,52 V65 M53,59 Q53,56 56,56 Q60,56 60,59 V65', 3.5))  # h
 
 # Bremsen: das Cockpit-Symbol „(!)" – kein Kreis mit Rand, sondern zwei Bögen.
 P['bremsen'] = svg(

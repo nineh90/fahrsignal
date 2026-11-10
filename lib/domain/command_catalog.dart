@@ -475,20 +475,6 @@ const List<CommandDef> kCommandCatalog = [
     // Mit Wort: die Zahl steht eben nicht darauf.
     vz: '325-1',
   ),
-  // Tastgeschwindigkeit: langsames Herantasten an unübersichtliche Stellen.
-  // Kein amtliches Zeichen – die Schnecke, im Gehäuse „4–7 km/h" (Vorgabe
-  // von Sarah 11/2026, vorher 1–2 km/h). Volles Wort auf der Kachel
-  // (SAR-128), nicht mehr „Tasttempo".
-  CommandDef(
-    't_tast',
-    'Tastgeschwindigkeit',
-    Icons.directions_walk,
-    Urgency.achtung,
-    CommandCategory.tempo,
-    // Weicher Trennstrich: bricht an der Wortfuge statt „Tastgeschwindigke/it".
-    tileLabel: 'Tast\u00ADgeschwindigkeit',
-    picto: 't_tast',
-  ),
   // Zonenschilder statt Einzelanordnung: VZ 274.1 gilt bis zum Ende der Zone
   // und ist damit eine andere Ansage als das Tempolimit an einer Stelle.
   CommandDef(
@@ -1378,7 +1364,7 @@ const Set<String> kExamHiddenKeys = {
   'langsamer', 'schneller',
   // Das zulässige Tempo aus den Schildern abzuleiten ist Prüfungsleistung –
   // die Vorgabe wäre die halbe Antwort.
-  't_schritt', 't_tast', 't_zone20', 't_zone30', 't_30', 't_40', 't_50',
+  't_schritt', 't_zone20', 't_zone30', 't_30', 't_40', 't_50',
   't_70', 't_80', 't_100', 't_frei',
 };
 
