@@ -192,10 +192,21 @@ P['einordnen'] = svg(
 P['strasse'] = svg(
     stroke('M8,96 L38,6', 10), stroke('M92,96 L62,6', 10),
     stroke('M50,92 V10', 8, 'stroke-dasharray="11 10"'))
+# Kreuzung: zwei Straßen kreuzen sich, von oben – nur die vier Bordstein-
+# ecken. Bewusst nicht VZ 102: das Zeichen heißt „rechts vor links" und
+# sagte dem Schüler etwas über die Vorfahrt, das nicht stimmen muss.
+P['kreuzung'] = svg(
+    stroke('M32,4 V32 H4 M68,4 V32 H96 M32,96 V68 H4 M68,96 V68 H96', 10),
+    stroke('M50,4 V22 M50,78 V96 M4,50 H22 M78,50 H96', 7, 'opacity="0.5"'))
 # Straße folgen: geschwungener Verlauf mit Pfeil.
 P['folgen'] = svg(
     stroke('M50,96 C50,66 18,74 18,50 C18,26 82,42 82,18', 12),
     stroke('M66,32 L82,14 L98,32', 12))
+# Überholen: Auto vorn rechts, das eigene links daneben, Pfeil vorbei.
+# Kein Verkehrszeichen dafür – VZ 276 ist das Überholverbot.
+P['ueberholen'] = svg(
+    road_lanes(), car_top(70, 30, 26, 46), car_top(30, 74, 26, 46),
+    arrow([(30, 46), (30, 6)], 13, 11))
 # Rückwärts: Auto von oben, Pfeil nach hinten.
 P['rueckwaerts'] = svg(
     car_top(34, 46, 36, 64), arrow([(78, 20), (78, 92)], 14, 12))
@@ -238,8 +249,8 @@ def tacho(needle_deg, sign):
 
 P['langsamer'] = tacho(150, '-')
 P['schneller'] = tacho(30, '+')
-# Tastgeschwindigkeit (1–2 km/h, SAR-128): Schnecke, im Gehäuse steht die
-# Vorgabe „1–2 km/h" – als Strichschrift, nicht als <text>: so sieht sie ohne
+# Tastgeschwindigkeit (4–7 km/h, Sarah 11/2026; vorher 1–2 km/h, SAR-128):
+# Schnecke, im Gehäuse steht die Vorgabe „4–7 km/h" – als Strichschrift, nicht als <text>: so sieht sie ohne
 # Schriftart auf jedem Gerät gleich aus. Das Gehäuse ist deshalb ein großer
 # Ring statt Spirale; „km/h" ist auf der Kachel nur Andeutung, auf dem
 # Schülerschirm (150–260 px) gut lesbar.
@@ -248,9 +259,9 @@ P['t_tast'] = svg(
     rect(78, 50, 18, 44, 9),                   # Kopf
     stroke('M82,52 L76,36 M92,52 L98,38', 6),  # Fühler
     circle(40, 43, 36, 7),                     # Gehäuse
-    stroke('M17,26 L24,19 V47', 7),            # 1
-    stroke('M32,35 H39', 5),                   # –
-    stroke('M48,25 Q49,19 55,19 Q62,19 62,26 Q62,31 56,37 L48,47 H63', 7),  # 2
+    stroke('M25,21 L16,38 H31 M26,29 V47', 7),  # 4
+    stroke('M35,35 H41', 5),                   # –
+    stroke('M46,22 H60 L50,47', 7),            # 7
     stroke('M20,52 V65 M26,56 L20,61 L26,65'   # k
            ' M30,65 V56 M30,59 Q30,56 33,56 Q35,56 35,59 V65'
            ' M35,59 Q35,56 38,56 Q41,56 41,59 V65'  # m

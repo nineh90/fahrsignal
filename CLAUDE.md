@@ -356,7 +356,7 @@ Die Dateien in `assets/signs/` sind die amtlichen Zeichen von Wikimedia Commons;
 StVO-Zeichen sind als amtliche Werke (§ 5 UrhG) gemeinfrei, die konkreten SVGs stehen
 dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 `sodipodi:namedview` entfernt – sonst schreibt `flutter_svg` bei jedem Aufbau
-„unhandled element" ins Log. Zusammen wiegen alle zwanzig ~80 kB.
+„unhandled element" ins Log. Zusammen wiegen alle zweiundzwanzig ~90 kB.
 
 | Kommando | Zeichen |
 |---|---|
@@ -369,20 +369,24 @@ dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 | Vorfahrtstraße | VZ 306 |
 | Vorfahrt | VZ 301 – Vorfahrt an der nächsten Kreuzung; „du hast Vorfahrt" landet seit dem 19.09. hier, nicht mehr bei 306 |
 | Abknickende Vorfahrt links / rechts | VZ 306 **mit Zusatzzeichen 1002-10 / 1002-20** darunter → `vz306-1002-10.svg` – die Datei ist die Kombination, wie sie am Mast hängt (kein erfundenes Zeichen: beide Teile amtlich, aus den zwei Wikimedia-SVGs zusammengesetzt, Zusatzzeichen auf 72 % wie 420 unter 600 mm). Hochformat → `_aspect` 600/1057, `_optisch` 1,25 – mehr sprengt die Kachel bei zweizeiliger Beschriftung |
-| Tastgeschwindigkeit | kein Zeichen (1–2 km/h, langsames Herantasten) → Piktogramm Schnecke, im Gehäuse „1–2 km/h“ als Strichschrift (SAR-128), `t_tast`, im Prüfungsmodus gesperrt wie alle Tempovorgaben |
+| Tastgeschwindigkeit | kein Zeichen (langsames Herantasten) → Piktogramm Schnecke, im Gehäuse „4–7 km/h“ als Strichschrift (Vorgabe Sarah 10.11.2026, vorher 1–2 km/h; SAR-128), `t_tast`, im Prüfungsmodus gesperrt wie alle Tempovorgaben |
 | Halten | VZ 314 (Parken) – seit SAR-119 standardmäßig ausgeblendet |
 | Stop | VZ 206 – das rote Achteck ist die kürzeste Halt-Botschaft |
 | Hindernis | VZ 101 (Gefahrstelle) – das amtliche „Achtung, da ist etwas" |
+| Bahnübergang | VZ 151 – heißt seit StVO 2013 schlicht „Bahnübergang“ und gilt mit und ohne Schranke (VZ 150 ist abgeschafft). Nicht das Andreaskreuz: das regelt den Vorrang am Gleis, die Anweisung kündigt an |
+| Radfahrer | VZ 138-10 (Radverkehr) |
+| Kreuzung | **kein** Zeichen → Piktogramm (vier Bordsteinecken). VZ 102 hieße „rechts vor links“ und stimmt nicht an jeder Kreuzung. Keine eigene Sprechvariante: „Kreuzung“ ist im Parser Zählnomen („zweite Kreuzung links“) |
+| Überholen | kein Zeichen (VZ 276 ist das Verbot) → Piktogramm |
 | Tanken | VZ 365-52 (Tankstelle) |
 | Schritttempo | VZ 325.1 – das Spielstraßen-Schild *ist* die Anweisung; eine Zahl 4–7 im Verbotszeichen steht so an keiner Straße |
 | 30er Zone | VZ 274.1 – gilt bis zum Zonenende und ist damit eine andere Ansage als ein Limit an einer Stelle |
 | 20er Zone | VZ 274.1-20 (verkehrsberuhigter Geschäftsbereich) → `vz274-1-20.svg` |
-| Tempo 30/50/70/100 | VZ 274, **gezeichnet** (`SignShape.limit`) |
+| Tempo 30/40/50/70/80/100 | VZ 274, **gezeichnet** (`SignShape.limit`) |
 | Unbegrenzt | VZ 282 |
 
 **Kacheln ohne Wort (SAR-119):** `signOnly: true` am Katalogeintrag – die Sender-Kachel
 zeigt dann nur das Schild, größer (`_kSignOnlySize`), mit dem `label` als Screenreader-Name.
-Nur wo das Schild die Anweisung selbst ausschreibt: Tempo 30/50/70/100, Unbegrenzt,
+Nur wo das Schild die Anweisung selbst ausschreibt: Tempo 30/40/50/70/80/100, Unbegrenzt,
 20er/30er Zone. Schritttempo, Langsamer, Schneller, Bremsen behalten ihr Wort. Die
 Limits stehen als Gruppe `tempolimit` in einer Zeile hintereinander.
 
@@ -441,7 +445,7 @@ was Anweisung der Fahrlehrperson.
 
 Zwei Quellen, beide am Katalogeintrag:
 
-- **`picto: '<name>'`** → `assets/pictos/<name>.svg`, ein eigenes Bild. 57 Stück,
+- **`picto: '<name>'`** → `assets/pictos/<name>.svg`, ein eigenes Bild. 60 Stück,
   alle **aus `tool/pictos.py` erzeugt** (`python3 tool/pictos.py`, mit `--sheet`
   zusätzlich eine Übersicht nach `/tmp/fs/pictos.png`). Der Generator baut sie aus
   denselben Bausteinen (Auto von oben, Auto von hinten, Pfeil, Kopf von oben, Lampe,

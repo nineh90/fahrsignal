@@ -45,6 +45,8 @@ void main() {
         'abknickend_links': '306-1002-10',
         'abknickend_rechts': '306-1002-20',
         'hindernis': '101',
+        'bahnuebergang': '151',
+        'radfahrer': '138-10',
         'stopp': '206',
         'tanken': '365-52',
       },

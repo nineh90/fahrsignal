@@ -7,7 +7,7 @@ import 'package:fahrsignal/domain/tile_layout.dart';
 import 'package:fahrsignal/ui/sender_grid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _limits = ['t_30', 't_50', 't_70', 't_100', 't_frei'];
+const _limits = ['t_30', 't_40', 't_50', 't_70', 't_80', 't_100', 't_frei'];
 
 void main() {
   group('Tempo-Bereich (SAR-119)', () {
@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Langsamer'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp(r'^Tempo 50\b')), findsOneWidget);
 
-    // Die fünf Limits teilen sich auch auf dem Handy eine Zeile.
+    // Die sieben Limits teilen sich auch auf dem Handy eine Zeile.
     final ys = {
       for (final k in ['Tempo 30', 'Tempo 100', 'Unbegrenzt'])
         tester.getCenter(find.bySemanticsLabel(RegExp('^$k\\b'))).dy,

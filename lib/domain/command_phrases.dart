@@ -116,6 +116,13 @@ const Map<String, List<String>> kCommandPhrases = {
     'folge der strasse',
     'weiter folgen',
   ],
+  'ueberholen': [
+    'ueberholen',
+    'ueberhol',
+    'ueberhole',
+    'jetzt ueberholen',
+    'ueberholen bitte',
+  ],
   'rueckwaerts': [
     'rueckwaerts',
     'zurueck setzen',
@@ -165,6 +172,7 @@ const Map<String, List<String>> kCommandPhrases = {
     'schneckentempo',
   ],
   't_30': ['tempo 30', '30', '30 fahren'],
+  't_40': ['tempo 40', '40', '40 fahren'],
   't_zone20': [
     '20er zone',
     'zwanziger zone',
@@ -182,6 +190,7 @@ const Map<String, List<String>> kCommandPhrases = {
   ],
   't_50': ['tempo 50', '50', '50 fahren', 'innerorts 50'],
   't_70': ['tempo 70', '70', '70 fahren'],
+  't_80': ['tempo 80', '80', '80 fahren'],
   't_100': ['tempo 100', '100', '100 fahren'],
   't_frei': [
     'unbegrenzt',
@@ -271,6 +280,23 @@ const Map<String, List<String>> kCommandPhrases = {
     'engstelle',
     'blockiert',
     'da ist ein hindernis',
+  ],
+  'bahnuebergang': [
+    'bahnuebergang',
+    'bahnschranke',
+    'schranke',
+    'bahngleise',
+    'gleise',
+    'zug',
+  ],
+  'radfahrer': [
+    'radfahrer',
+    'radfahrerin',
+    'fahrradfahrer',
+    'fahrradfahrerin',
+    'radfahrende',
+    'radler',
+    'fahrrad',
   ],
   'abstand': [
     'abstand',

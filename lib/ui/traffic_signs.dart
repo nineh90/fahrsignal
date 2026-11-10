@@ -72,7 +72,7 @@ double _optisch(CommandDef def) {
       // Achteck kommt dem Kreis nahe.
       '206' => 1.03,
       // Dreiecke mit schlankem Inhalt.
-      '101' || '301' => 1.18,
+      '101' || '301' || '151' || '138-10' => 1.18,
       // Hochformat (Zeichen + Zusatzzeichen): `size` ist die Höhe, und die
       // Raute obendrauf wäre bei gleicher Höhe nur halb so groß wie allein.
       '306-1002-10' || '306-1002-20' => 1.25,

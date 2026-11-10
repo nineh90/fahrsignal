@@ -356,6 +356,18 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.richtung,
     picto: 'strasse',
   ),
+  // „An der Kreuzung" (Sarah, 11/2026). Piktogramm statt VZ 102: das Zeichen
+  // heißt „rechts vor links" und sagte über die Vorfahrt etwas, das an der
+  // gemeinten Kreuzung nicht stimmen muss. Keine eigene Sprechvariante –
+  // „Kreuzung" ist im Parser Zählnomen („zweite Kreuzung links"), wie Straße.
+  CommandDef(
+    'kreuzung',
+    'Kreuzung',
+    Icons.add,
+    Urgency.info,
+    CommandCategory.richtung,
+    picto: 'kreuzung',
+  ),
   // Die drei Kreisverkehr-Ausfahrten gehören zusammen und stehen deshalb
   // per `group` immer in einer eigenen Zeile nebeneinander – sonst reißt
   // der Zeilenumbruch sie je nach Displaybreite auseinander.
@@ -393,6 +405,15 @@ const List<CommandDef> kCommandCatalog = [
     Urgency.info,
     CommandCategory.richtung,
     picto: 'folgen',
+  ),
+  // Kein amtliches Zeichen – VZ 276 ist das Überholverbot.
+  CommandDef(
+    'ueberholen',
+    'Überholen',
+    Icons.keyboard_double_arrow_up,
+    Urgency.info,
+    CommandCategory.richtung,
+    picto: 'ueberholen',
   ),
   CommandDef(
     'rueckwaerts',
@@ -454,9 +475,10 @@ const List<CommandDef> kCommandCatalog = [
     // Mit Wort: die Zahl steht eben nicht darauf.
     vz: '325-1',
   ),
-  // Tastgeschwindigkeit (1–2 km/h): langsames Herantasten an unübersichtliche
-  // Stellen. Kein amtliches Zeichen – die Schnecke, im Gehäuse „1–2 km/h".
-  // Volles Wort auf der Kachel (SAR-128), nicht mehr „Tasttempo".
+  // Tastgeschwindigkeit: langsames Herantasten an unübersichtliche Stellen.
+  // Kein amtliches Zeichen – die Schnecke, im Gehäuse „4–7 km/h" (Vorgabe
+  // von Sarah 11/2026, vorher 1–2 km/h). Volles Wort auf der Kachel
+  // (SAR-128), nicht mehr „Tasttempo".
   CommandDef(
     't_tast',
     'Tastgeschwindigkeit',
@@ -502,6 +524,17 @@ const List<CommandDef> kCommandCatalog = [
     signOnly: true,
   ),
   CommandDef(
+    't_40',
+    'Tempo 40',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '40',
+    group: 'tempolimit',
+    signOnly: true,
+  ),
+  CommandDef(
     't_50',
     'Tempo 50',
     Icons.speed,
@@ -520,6 +553,17 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.tempo,
     sign: SignShape.limit,
     signText: '70',
+    group: 'tempolimit',
+    signOnly: true,
+  ),
+  CommandDef(
+    't_80',
+    'Tempo 80',
+    Icons.speed,
+    Urgency.info,
+    CommandCategory.tempo,
+    sign: SignShape.limit,
+    signText: '80',
     group: 'tempolimit',
     signOnly: true,
   ),
@@ -645,6 +689,27 @@ const List<CommandDef> kCommandCatalog = [
     CommandCategory.hinweis,
     // VZ 101 Gefahrstelle – das amtliche „Achtung, da ist etwas"
     vz: '101',
+  ),
+  // VZ 151 heißt seit der StVO 2013 schlicht „Bahnübergang" und gilt für
+  // jeden – mit und ohne Schranke (das alte VZ 150 gibt es nicht mehr).
+  // Bewusst nicht das Andreaskreuz: das regelt den Vorrang direkt am Gleis,
+  // die Anweisung kündigt an.
+  CommandDef(
+    'bahnuebergang',
+    'Bahnübergang',
+    Icons.train,
+    Urgency.achtung,
+    CommandCategory.hinweis,
+    vz: '151',
+  ),
+  CommandDef(
+    'radfahrer',
+    'Radfahrer',
+    Icons.pedal_bike,
+    Urgency.achtung,
+    CommandCategory.hinweis,
+    // VZ 138-10 Radverkehr
+    vz: '138-10',
   ),
   CommandDef(
     'abstand',
@@ -1313,8 +1378,8 @@ const Set<String> kExamHiddenKeys = {
   'langsamer', 'schneller',
   // Das zulässige Tempo aus den Schildern abzuleiten ist Prüfungsleistung –
   // die Vorgabe wäre die halbe Antwort.
-  't_schritt', 't_tast', 't_zone20', 't_zone30', 't_30', 't_50', 't_70',
-  't_100', 't_frei',
+  't_schritt', 't_tast', 't_zone20', 't_zone30', 't_30', 't_40', 't_50',
+  't_70', 't_80', 't_100', 't_frei',
 };
 
 /// Notkommandos. Sie überstimmen jede Sperre: die Fahrlehrperson trägt auch
