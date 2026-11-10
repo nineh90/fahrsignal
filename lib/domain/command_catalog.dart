@@ -667,6 +667,16 @@ const List<CommandDef> kCommandCatalog = [
     tileLabel: 'Abknickend rechts',
     group: 'abknickend',
   ),
+  // VZ 102: Kreuzung oder Einmündung mit Vorfahrt von rechts. Kam per
+  // Sprache vorher als „rechts" + „links" an – zwei Pfeile.
+  CommandDef(
+    'rechts_vor_links',
+    'Rechts vor links',
+    Icons.close,
+    Urgency.achtung,
+    CommandCategory.hinweis,
+    vz: '102',
+  ),
   CommandDef(
     'hindernis',
     'Hindernis',
@@ -1430,11 +1440,37 @@ String displayLabel(DriveCommand c) {
   final def = commandByKey(c.key);
   final base = def?.label ?? c.key;
   if (!c.hasOrdinal) return base;
-  final noun = kOrdinalNoun[c.key];
+  // Ort aus der Kombi („2. Kreuzung links"), sonst das feste Zählnomen.
+  final place = c.keys.skip(1).where(kPlaceKeys.contains).firstOrNull;
+  final noun = place != null ? commandByKey(place)?.label : kOrdinalNoun[c.key];
   if (noun == null) return '${c.ord}. $base';
   // „Abbiegen links" → „2. Straße links"
-  final direction = base.toLowerCase().contains('rechts') ? 'rechts' : 'links';
-  return '${c.ord}. $noun $direction';
+  return '${c.ord}. $noun ${_turnWord(c.key)}';
+}
+
+/// „links" / „rechts" / „geradeaus" zu einem Richtungs-Key.
+String _turnWord(String key) => key.endsWith('rechts')
+    ? 'rechts'
+    : key.endsWith('links')
+    ? 'links'
+    : 'geradeaus';
+
+/// Ort + Richtung als ganzer Satz, wie ihn der Prüfer sagt: „Nächste
+/// Kreuzung links", „2. Ampel rechts", „Im Kreisverkehr rechts". `null`, wenn
+/// [c] keine solche Kombi ist. Für Ansage und Rückmeldung im Sender – auf dem
+/// Schirm stehen Pfeil und Ort-Plakette.
+String? placeTurnLabel(DriveCommand c) {
+  if (c.keys.length != 2 ||
+      !kTurnKeys.contains(c.keys[0]) ||
+      !kPlaceKeys.contains(c.keys[1])) {
+    return null;
+  }
+  final place = commandByKey(c.keys[1])?.label ?? c.keys[1];
+  final turn = _turnWord(c.keys[0]);
+  if (c.hasOrdinal) return '${c.ord}. $place $turn';
+  return c.keys[1] == 'kreisverkehr'
+      ? 'Im Kreisverkehr $turn'
+      : 'Nächste $place $turn';
 }
 
 /// Positives Lob (Empfänger wird grün statt urgency-farbig).

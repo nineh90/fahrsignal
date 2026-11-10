@@ -303,7 +303,12 @@ ParsedIntent parseUtterance(
     );
   }
 
-  final tokens = normalized.split(' ');
+  // „Halt!" allein ist ein Haltruf. Als Phrase darf „halt" nicht in den
+  // Katalog – im Satz ist es Füllwort („fahr halt langsamer") und würde
+  // dort einen roten STOPP auslösen. Nur die ganze Äußerung zählt.
+  final tokens = RegExp(r'^halt( halt)*$').hasMatch(normalized)
+      ? const ['stopp']
+      : normalized.split(' ');
   final index = _index();
 
   // --- 1. Längster Treffer gewinnt -----------------------------------------
@@ -315,6 +320,15 @@ ParsedIntent parseUtterance(
 
   var i = 0;
   while (i < tokens.length) {
+    // „von rechts"/„von links" sagt, woher etwas kommt („Radfahrer von
+    // rechts") – das ist keine Abbiegeanweisung und wird nur verstanden.
+    if (tokens[i] == 'von' &&
+        i + 1 < tokens.length &&
+        (tokens[i + 1] == 'links' || tokens[i + 1] == 'rechts')) {
+      consumed[i] = consumed[i + 1] = true;
+      i += 2;
+      continue;
+    }
     var matched = false;
     final maxLen = _maxPhraseTokens.clamp(1, tokens.length - i);
     for (var len = maxLen; len >= 1; len--) {
@@ -361,6 +375,10 @@ ParsedIntent parseUtterance(
       if (!consumed[k]) tokens[k],
   ].any(kNegationWords.contains);
   var boosted = false;
+  // „Achtung"/„Vorsicht" heben höchstens auf Gelb. Rot heißt „sofort
+  // reagieren" und gehört Bremsen und Stopp – „Achtung Radfahrer" ist eine
+  // Warnung, kein Haltbefehl. „sofort"/„dringend" dürfen weiter bis Rot.
+  var boostCapped = true;
   bool? ask;
 
   for (var k = 0; k < tokens.length; k++) {
@@ -368,6 +386,7 @@ ParsedIntent parseUtterance(
     final t = tokens[k];
     if (kUrgencyBoosters.contains(t)) {
       boosted = true;
+      if (!kSoftBoosters.contains(t)) boostCapped = false;
       consumed[k] = true;
     } else if (kNegationWords.contains(t)) {
       consumed[k] = true;
@@ -424,22 +443,41 @@ ParsedIntent parseUtterance(
   // --- 5. Ordnungszahl auflösen --------------------------------------------
   // Entweder ersetzt sie den Key („zweite Ausfahrt" → ausfahrt2) oder sie
   // wird Attribut („zweite Straße links" → abbiegen_links mit ord=2).
-  var keys = hits.map((h) => h.key).toList();
+  // Doppelte raus, Reihenfolge bleibt („halten … am Rand halten").
+  var keys = {for (final h in hits) h.key}.toList();
   var attributeOrdinal = 0;
 
-  if (ordinal > 0) {
+  // Die Ausfahrt zeigt den Kreisel schon („im Kreisverkehr zweite Ausfahrt").
+  if (keys.any((k) => k.startsWith('ausfahrt'))) keys.remove('kreisverkehr');
+
+  // Ort + Richtung („nächste Kreuzung links", „an der Ampel rechts"):
+  // Richtung zuerst, damit der Pfeil beim Schüler groß steht und der Ort
+  // als Plakette darunter. „Nächste"/„erste" ist der Normalfall und braucht
+  // keine Zahl; erst ab der zweiten trägt der Pfeil eine Plakette.
+  final place = keys.where(kPlaceKeys.contains).firstOrNull;
+  final turn = keys.where(kTurnKeys.contains).firstOrNull;
+  if (place != null && turn != null) {
+    keys = [
+      turn,
+      place,
+      for (final k in keys)
+        if (k != turn && k != place) k,
+    ];
+    if (ordinal >= 2) attributeOrdinal = ordinal;
+  } else if (ordinal > 0) {
     final primary = keys.first;
     final ordinalFamily = kOrdinalKeys.entries
         .where((e) => e.value.containsValue(primary))
         .firstOrNull;
     if (ordinalFamily != null) {
       keys[0] = ordinalFamily.value[ordinal] ?? primary;
-    } else if (kOrdinalCapable.contains(primary)) {
-      attributeOrdinal = ordinal;
+    } else if (kOrdinalCapable.contains(primary) ||
+        kPlaceKeys.contains(primary)) {
+      if (ordinal >= 2) attributeOrdinal = ordinal;
     } else if (primary == 'links' || primary == 'rechts') {
       // „zweite links" ohne Verb meint das Abbiegen, nicht die Seite.
       keys[0] = primary == 'links' ? 'abbiegen_links' : 'abbiegen_rechts';
-      attributeOrdinal = ordinal;
+      if (ordinal >= 2) attributeOrdinal = ordinal;
     }
   }
 
@@ -466,7 +504,8 @@ ParsedIntent parseUtterance(
     urgency = urgencies.reduce((a, b) => a.index >= b.index ? a : b);
   }
   if (boosted && urgency.index < Urgency.dringend.index) {
-    urgency = Urgency.values[urgency.index + 1];
+    final raised = Urgency.values[urgency.index + 1];
+    urgency = boostCapped && raised == Urgency.dringend ? urgency : raised;
   }
 
   // --- 8. Konfidenz ---------------------------------------------------------

@@ -44,6 +44,7 @@ void main() {
         'vorfahrt': '301',
         'abknickend_links': '306-1002-10',
         'abknickend_rechts': '306-1002-20',
+        'rechts_vor_links': '102',
         'hindernis': '101',
         'bahnuebergang': '151',
         'radfahrer': '138-10',

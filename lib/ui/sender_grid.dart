@@ -36,6 +36,58 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
     ref.sendCommand(DriveCommand.now(d.key, d.urgency, ask: ask));
   }
 
+  /// Langes Drücken auf Straße, Kreuzung oder Ampel: Richtung dazu wählen
+  /// und beides in einem Zug senden – dasselbe, was „nächste Kreuzung links"
+  /// per Sprache ergibt (Pfeil groß, Ort als Plakette). Kurzes Tippen
+  /// schickt weiter nur den Ort.
+  Future<void> _pickTurn(CommandDef place) async {
+    final turns = [
+      for (final k in const ['links', 'geradeaus', 'rechts']) commandByKey(k)!,
+    ];
+    final turn = await showModalBottomSheet<CommandDef>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Nächste ${place.label} …',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  for (final t in turns) ...[
+                    if (t != turns.first) const SizedBox(width: _kTileGap),
+                    Expanded(
+                      child: SizedBox(
+                        height: _kTileHeight,
+                        child: _CommandTile(
+                          def: t,
+                          onTap: (d) => Navigator.pop(ctx, d),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (turn == null || !mounted) return;
+    ref.sendCommand(
+      DriveCommand.combo([
+        turn.key,
+        place.key,
+      ], maxUrgency([turn.urgency, place.urgency])),
+    );
+  }
+
   Future<void> _composeFreitext() async {
     final controller = TextEditingController();
     final text = await showDialog<String>(
@@ -254,6 +306,7 @@ class _SenderGridState extends ConsumerState<SenderGrid> {
                     cat: cat,
                     items: layout.visible(cat, exam: exam),
                     onTap: _tap,
+                    onLongPress: _pickTurn,
                   ),
               ],
             ),
@@ -468,10 +521,14 @@ class _CategorySection extends StatelessWidget {
   /// Schon angeordnet und gefiltert (Fahrlehrer-Anordnung, Prüfungsmodus).
   final List<CommandDef> items;
   final void Function(CommandDef) onTap;
+
+  /// Nur für Orte ([kTurnPickerKeys]) – dort öffnet es die Richtungswahl.
+  final void Function(CommandDef)? onLongPress;
   const _CategorySection({
     required this.cat,
     required this.items,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -510,7 +567,11 @@ class _CategorySection extends StatelessWidget {
                       SizedBox(
                         width: width,
                         height: _kTileHeight,
-                        child: _CommandTile(def: d, onTap: onTap),
+                        child: _CommandTile(
+                          def: d,
+                          onTap: onTap,
+                          onLongPress: onLongPress,
+                        ),
                       ),
                   ],
                 )
@@ -531,7 +592,11 @@ class _CategorySection extends StatelessWidget {
                               row.length,
                         ),
                         height: _kTileHeight,
-                        child: _CommandTile(def: row[i], onTap: onTap),
+                        child: _CommandTile(
+                          def: row[i],
+                          onTap: onTap,
+                          onLongPress: onLongPress,
+                        ),
                       ),
                     ],
                   ],
@@ -561,20 +626,31 @@ List<List<CommandDef>> _rows(List<CommandDef> items) {
   return rows;
 }
 
+/// Orte, bei denen langes Drücken die Richtungswahl öffnet. Der Kreisverkehr
+/// fehlt bewusst: dafür gibt es die Ausfahrt-Kacheln.
+const Set<String> kTurnPickerKeys = {'strasse', 'kreuzung', 'ampel'};
+
 class _CommandTile extends StatelessWidget {
   final CommandDef def;
   final void Function(CommandDef) onTap;
-  const _CommandTile({required this.def, required this.onTap});
+  final void Function(CommandDef)? onLongPress;
+  const _CommandTile({
+    required this.def,
+    required this.onTap,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     final color = tileColor(def);
-    return Material(
+    final picker = onLongPress != null && kTurnPickerKeys.contains(def.key);
+    final tile = Material(
       color: color,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => onTap(def),
+        onLongPress: picker ? () => onLongPress!(def) : null,
         // Nur Schild und Wort. Der frühere Urgency-Punkt oben rechts ist
         // raus: die Dringlichkeit steht der Fahrlehrperson schon in der
         // Kachelfarbe und im Schild selbst gegenüber – auf dem Empfängerschirm
@@ -622,6 +698,20 @@ class _CommandTile extends StatelessWidget {
                 ),
               ),
       ),
+    );
+    if (!picker) return tile;
+    // Kleiner Hinweis, dass hier mehr geht: langes Drücken = Richtung dazu.
+    return Stack(
+      children: [
+        Positioned.fill(child: tile),
+        const Positioned(
+          right: 6,
+          top: 4,
+          child: IgnorePointer(
+            child: Icon(Icons.more_horiz, size: 16, color: Colors.white70),
+          ),
+        ),
+      ],
     );
   }
 }

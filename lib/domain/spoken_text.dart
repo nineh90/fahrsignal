@@ -34,10 +34,13 @@ Utterance? spokenGerman(DriveCommand c) {
   const de = 'de-DE';
   if (c.isFreitext) return Utterance(c.text, de);
 
-  final text = [
-    displayLabel(c),
-    for (final k in c.keys.skip(1)) commandByKey(k)?.label ?? k,
-  ].map(_speakable).join(', ');
+  final turn = placeTurnLabel(c);
+  final text = turn != null
+      ? _speakable(turn)
+      : [
+          displayLabel(c),
+          for (final k in c.keys.skip(1)) commandByKey(k)?.label ?? k,
+        ].map(_speakable).join(', ');
 
   // Abfrage: die Lösung steht nicht auf dem Schirm, also auch nicht im Ohr.
   // Die Erklärung selbst wird nicht vorgelesen – zu lang für die Fahrt.

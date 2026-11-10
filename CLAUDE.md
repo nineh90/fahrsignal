@@ -149,6 +149,36 @@ zurück; was danach noch kommt, wird verworfen (kein Doppelsenden).
 - Web-Erkennung: endet Safari nach `stop()` nicht binnen 1,5 s, wird hart abgebrochen;
   kam `stop()` vor `onstart`, holt `onstart` den Abbruch nach. Halten ist auf 30 s begrenzt.
 
+### Spracherkennung im Alltag: Satzkatalog
+
+`test/speech_korpus_test.dart` hält rund 100 Sätze fest, wie sie im Auto fallen
+(„Fahren Sie bitte an der nächsten Kreuzung geradeaus", „Fuß vom Gas", „Achtung
+Radfahrer von rechts"), jeweils mit den erwarteten Keys **und** der Bedingung, dass
+der Satz ohne Rückfrage rausgeht. Angelegt am 10.11.2026, als 41 von 92 danebenlagen.
+**Geht im Auto ein Satz daneben: Zeile dazu, dann reparieren.**
+
+Was dabei geregelt wurde:
+
+- **Ort + Richtung** (Sarah, 10.11.2026): „nächste Kreuzung links", „an der Ampel
+  rechts", „zweite Straße rechts". Orte stehen in `kPlaceKeys` (Straße, Kreuzung,
+  Ampel, Kreisverkehr), Richtungen in `kTurnKeys`. Kommen beide vor, sendet der Parser
+  `[Richtung, Ort]` – beim Schüler steht der **Pfeil groß, der Ort als Plakette**
+  darunter. Vorher war es umgekehrt, und Kreuzung/Einmündung gingen ganz verloren.
+  „Nächste"/„erste" ist der Normalfall und trägt **keine** Zahl; ab der zweiten
+  sitzt sie als Plakette am Pfeil. Angesagt wird der ganze Satz
+  („Nächste Kreuzung links", `placeTurnLabel`). Einmündung, Abzweigung, Möglichkeit
+  zählen als Straße.
+- **Dasselbe per Kachel:** langes Drücken auf Straße, Kreuzung oder Ampel
+  (`kTurnPickerKeys`, kleines „…" in der Ecke) öffnet links/geradeaus/rechts und
+  schickt beides in einem Zug. Kurzes Tippen schickt weiter nur den Ort. Kein Modus.
+- **„Achtung"/„Vorsicht" heben höchstens auf Gelb** (`kSoftBoosters`). Rot heißt
+  sofort reagieren und gehört Bremsen und Stopp; „Achtung Radfahrer" färbte vorher
+  den Schirm rot. „sofort"/„dringend" dürfen weiter bis Rot.
+- **„von rechts"/„von links"** beschreibt, woher etwas kommt, und wird kein Pfeil.
+- **„Halt!" allein** ist Stopp. Im Satz bleibt „halt" Füllwort („fahr halt langsamer").
+- Doppelt Erkanntes wird zusammengelegt; neben einer Ausfahrt entfällt der Kreisverkehr.
+- Füllwörter für die Prüfersprache: „Sie", „vorne", „kommt", „schau" …
+
 ### Eigene Kachel-Anordnung (SAR-120)
 
 Der Fahrlehrer sortiert sein Raster selbst und blendet Kacheln aus oder ein:
@@ -356,7 +386,7 @@ Die Dateien in `assets/signs/` sind die amtlichen Zeichen von Wikimedia Commons;
 StVO-Zeichen sind als amtliche Werke (§ 5 UrhG) gemeinfrei, die konkreten SVGs stehen
 dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 `sodipodi:namedview` entfernt – sonst schreibt `flutter_svg` bei jedem Aufbau
-„unhandled element" ins Log. Zusammen wiegen alle zweiundzwanzig ~90 kB.
+„unhandled element" ins Log. Zusammen wiegen alle dreiundzwanzig ~95 kB.
 
 | Kommando | Zeichen |
 |---|---|
@@ -374,6 +404,7 @@ dort als *Public domain*. Aus jeder Datei sind `<metadata>`, `<defs/>` und
 | Hindernis | VZ 101 (Gefahrstelle) – das amtliche „Achtung, da ist etwas" |
 | Bahnübergang | VZ 151 – heißt seit StVO 2013 schlicht „Bahnübergang“ und gilt mit und ohne Schranke (VZ 150 ist abgeschafft). Nicht das Andreaskreuz: das regelt den Vorrang am Gleis, die Anweisung kündigt an |
 | Radfahrer | VZ 138-10 (Radverkehr) |
+| Rechts vor links | VZ 102 (Kreuzung mit Vorfahrt von rechts) – per Sprache kam „rechts vor links“ vorher als zwei Pfeile an |
 | Kreuzung | **kein** Zeichen → Piktogramm (vier Bordsteinecken). VZ 102 hieße „rechts vor links“ und stimmt nicht an jeder Kreuzung. Keine eigene Sprechvariante: „Kreuzung“ ist im Parser Zählnomen („zweite Kreuzung links“) |
 | Überholen | kein Zeichen (VZ 276 ist das Verbot) → Piktogramm |
 | Tanken | VZ 365-52 (Tankstelle) |

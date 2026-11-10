@@ -110,11 +110,24 @@ const Map<String, List<String>> kCommandPhrases = {
     'ampel beachten',
     'auf die ampel achten',
   ],
+  // Orte (Sarah, 11/2026): allein gesagt die Kachel, mit Richtung zusammen
+  // die Kombi „Pfeil groß, Ort als Plakette" – siehe kPlaceKeys.
+  'strasse': [
+    'strasse',
+    'seitenstrasse',
+    'querstrasse',
+    'einmuendung',
+    'abzweigung',
+    'moeglichkeit',
+  ],
+  'kreuzung': ['kreuzung', 'strassenkreuzung'],
   'folgen': [
     'der strasse folgen',
     'strasse folgen',
     'folge der strasse',
     'weiter folgen',
+    // Allein, sonst trifft es unscharf „Felgen" aus der Fahrzeugkunde.
+    'folgen',
   ],
   'ueberholen': [
     'ueberholen',
@@ -138,6 +151,7 @@ const Map<String, List<String>> kCommandPhrases = {
     'runter vom gas',
     'gas weg',
     'vom gas gehen',
+    'fuss vom gas',
     'etwas langsamer',
     'nicht so schnell',
   ],
@@ -148,9 +162,18 @@ const Map<String, List<String>> kCommandPhrases = {
     'etwas schneller',
     'gas geben',
     'gasgeben',
+    'gib gas',
+    'gib mehr gas',
   ],
   'bremsen': ['bremsen', 'brems', 'bremse jetzt', 'abbremsen'],
-  'parken': ['parken', 'parkluecke', 'halten', 'hier halten'],
+  'parken': [
+    'parken',
+    'parkluecke',
+    'halten',
+    'hier halten',
+    'am fahrbahnrand',
+    'am rechten fahrbahnrand',
+  ],
   // Tempovorgaben. Die nackten Zahlen sind bewusst dabei – „fünfzig" sagt
   // eine Fahrlehrperson im Auto sonst nicht beiläufig. Ziffernform, weil
   // `kNumberWords` beim Normalisieren dorthin auflöst.
@@ -159,6 +182,10 @@ const Map<String, List<String>> kCommandPhrases = {
     'schritttempo',
     'schritt tempo',
     '4 bis 7',
+    // VZ 325.1 *ist* das Spielstraßen-Schild.
+    'spielstrasse',
+    'verkehrsberuhigter bereich',
+    'verkehrsberuhigt',
   ],
   't_30': ['tempo 30', '30', '30 fahren'],
   't_40': ['tempo 40', '40', '40 fahren'],
@@ -192,6 +219,9 @@ const Map<String, List<String>> kCommandPhrases = {
 
   // --- Hinweise ---
   'spiegel': [
+    'in den rueckspiegel',
+    'in den rueckspiegel schauen',
+    'blick in den rueckspiegel',
     'spiegel',
     'in den spiegel schauen',
     'spiegel kontrollieren',
@@ -263,6 +293,8 @@ const Map<String, List<String>> kCommandPhrases = {
     'vorfahrt knickt rechts ab',
     'abknickend rechts',
   ],
+  // Ohne eigene Phrase wurde daraus „rechts" + „links" – zwei Pfeile.
+  'rechts_vor_links': ['rechts vor links'],
   'hindernis': [
     'hindernis',
     'baustelle',
@@ -301,6 +333,14 @@ const Map<String, List<String>> kCommandPhrases = {
     'hochschalten',
     'runterschalten',
     'gang raus',
+    'gang',
+    'ersten gang',
+    'zweiten gang',
+    'dritten gang',
+    'vierten gang',
+    'fuenften gang',
+    'sechsten gang',
+    'rueckwaertsgang',
   ],
   'anhalten': [
     'anhalten',
@@ -354,8 +394,21 @@ const Map<String, List<String>> kCommandPhrases = {
     'rueckwaerts in die luecke',
   ],
   'gfa_bremsung': ['gefahrenbremsung', 'gefahrbremsung', 'zielbremsung'],
-  'gfa_ecke': ['rechts um die ecke', 'rueckwaerts um die ecke', 'um die ecke'],
-  'gfa_umkehren': ['umkehren', 'umkehr', 'umkehren durch rueckwaertsfahren'],
+  'gfa_ecke': [
+    'rechts um die ecke rueckwaerts',
+    'rueckwaerts rechts um die ecke',
+    'rechts um die ecke',
+    'rueckwaerts um die ecke',
+    'um die ecke',
+  ],
+  'gfa_umkehren': [
+    'umkehren',
+    'umkehr',
+    'umkehren durch rueckwaertsfahren',
+    'wenden',
+    'wende',
+    'umdrehen',
+  ],
 
   // ===================== MODUS FAHRZEUG =====================
   // --- Abfahrtkontrolle ---
@@ -410,7 +463,9 @@ const Map<String, List<String>> kCommandPhrases = {
 
   // --- Fahrzeugeinweisung ---
   'sitz': ['sitz einstellen', 'sitzposition', 'sitz'],
-  'innenspiegel': ['innenspiegel', 'rueckspiegel'],
+  // „Rückspiegel" allein ist die Einweisung; „in den Rückspiegel (schauen)"
+  // während der Fahrt der Spiegelblick (`spiegel`).
+  'innenspiegel': ['innenspiegel', 'rueckspiegel', 'rueckspiegel einstellen'],
   'aussenspiegel_l': ['aussenspiegel links', 'linker aussenspiegel'],
   'aussenspiegel_r': ['aussenspiegel rechts', 'rechter aussenspiegel'],
   'gurt': ['gurt anlegen', 'anschnallen', 'gurt'],
@@ -447,6 +502,22 @@ const Map<String, List<String>> kCommandPhrases = {
 /// **aufgelöst**, statt als Attribut mitgeschickt zu werden.
 const Map<String, Map<int, String>> kOrdinalKeys = {
   'ausfahrt': {1: 'ausfahrt1', 2: 'ausfahrt2', 3: 'ausfahrt3'},
+};
+
+/// Orte, an denen abgebogen wird. Fällt einer davon mit einer Richtung
+/// ([kTurnKeys]) in einen Satz, sendet der Parser `[Richtung, Ort]`: der
+/// Pfeil steht beim Schüler groß, der Ort als Plakette darunter („nächste
+/// Kreuzung links", Sarah 11/2026). Vorher stand der Ort groß und der Pfeil
+/// klein – genau verkehrt herum.
+const Set<String> kPlaceKeys = {'strasse', 'kreuzung', 'ampel', 'kreisverkehr'};
+
+/// Richtungen, die mit einem Ort aus [kPlaceKeys] zusammengehen.
+const Set<String> kTurnKeys = {
+  'links',
+  'rechts',
+  'geradeaus',
+  'abbiegen_links',
+  'abbiegen_rechts',
 };
 
 /// Keys, die eine Ordnungszahl als **Attribut** (`DriveCommand.ord`) tragen.
@@ -491,6 +562,9 @@ const Map<String, int> kOrdinalWords = {
   'vierter': 4,
 };
 
+/// Verstärker, die höchstens bis Gelb (`achtung`) heben, nie auf Rot.
+const Set<String> kSoftBoosters = {'achtung', 'vorsicht'};
+
 /// Wörter, die die Dringlichkeit um eine Stufe anheben und dabei verbraucht
 /// werden. `achtung`/`vorsicht` stehen bewusst hier **und** als Kommando –
 /// die Sonderregel im Parser entscheidet anhand der Satzlänge.
@@ -533,6 +607,11 @@ const Set<String> kFillerWords = {
   'fahr', 'fahre', 'faehrst', 'fahren', 'mach', 'machst', 'machen', 'geh',
   'gehst', 'nimm', 'nimmst', 'musst', 'muss', 'kannst', 'solltest', 'wuerde',
   'werden', 'wirst', 'bist', 'ist', 'sind', 'war', 'hast', 'hat', 'haben',
+  // Der Prüfer siezt („Fahren Sie bitte …"), und angekündigt wird mit
+  // „da vorne kommt …" – ohne diese Wörter fiel die Abdeckung unter die
+  // Schwelle und der Satz landete in der Rückfrage.
+  'sie', 'ihr', 'vorne', 'dort', 'kommt', 'kommen', 'steht', 'nehmen',
+  'schau', 'schauen', 'guck', 'gucken', 'achte', 'raus', 'rein',
 };
 
 /// Wörter, die ein Kommando als **Abfrage** markieren („frag den
